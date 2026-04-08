@@ -342,7 +342,13 @@ class DataPipelineDebugEnvironment(
 
     def step(self, action: DataPipelineDebugAction) -> DataPipelineDebugObservation:
         if self._current_task is None:
-            raise RuntimeError("Environment must be reset before calling step().")
+            # Some HTTP clients may call /step without sticky session state.
+            # Recover by selecting a task from metadata or defaults.
+            metadata = getattr(action, "metadata", {}) or {}
+            self.reset(
+                difficulty=metadata.get("difficulty"),
+                task_id=metadata.get("task_id"),
+            )
 
         self._state.step_count += 1
 
