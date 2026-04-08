@@ -1,6 +1,6 @@
 ---
 title: Data Pipeline Debug Environment
-emoji: wrench
+emoji: 🔧
 colorFrom: blue
 colorTo: green
 sdk: docker
