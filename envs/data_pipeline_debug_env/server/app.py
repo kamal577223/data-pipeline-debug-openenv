@@ -368,9 +368,9 @@ LANDING_PAGE = dedent(
 
               <article class="card full">
                 <div class="label">Built For Teams</div>
-                <pre>• Reproduces real ETL debugging workflows used in data teams
-• Supports curriculum-style evaluation from easy to hard dependency chains
-• Gives transparent grader signals for model iteration and benchmarking</pre>
+                <pre>- Reproduces real ETL debugging workflows used in data teams
+- Supports curriculum-style evaluation from easy to hard dependency chains
+- Gives transparent grader signals for model iteration and benchmarking</pre>
               </article>
             </div>
           </section>
@@ -391,18 +391,13 @@ async def landing_page_web() -> str:
     return LANDING_PAGE
 
 
-def main(host: str = "0.0.0.0", port: int = 8000):
+def main():
     """Run the server locally."""
 
     import uvicorn
 
-    uvicorn.run(app, host=host, port=port)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 
 
 if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--port", type=int, default=8000)
-    args = parser.parse_args()
-    main(port=args.port)
+    main()
