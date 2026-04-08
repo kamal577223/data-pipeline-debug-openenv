@@ -5,4 +5,5 @@ __pycache__/
 .venv/
 venv/
 .openenv_upstream/
+.hf_cache/
 .DS_Store
