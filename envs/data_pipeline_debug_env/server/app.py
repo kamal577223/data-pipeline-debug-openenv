@@ -39,51 +39,85 @@ LANDING_PAGE = dedent(
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>Data Pipeline Debug Environment</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
         <style>
           :root {
-            --bg: #f3eed8;
-            --panel: rgba(10, 16, 30, 0.92);
-            --panel-soft: rgba(255, 255, 255, 0.08);
-            --text: #f8f4e8;
-            --muted: #b8c1d1;
-            --accent: #76e3c4;
-            --accent-2: #ffcf70;
-            --line: rgba(255, 255, 255, 0.14);
-            --shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+            --bg: #0e0f17;
+            --bg-soft: #191b2a;
+            --panel: rgba(18, 21, 35, 0.88);
+            --panel-soft: rgba(255, 255, 255, 0.05);
+            --text: #edf2ff;
+            --muted: #aab5cc;
+            --accent: #68e7c2;
+            --accent-2: #ffd16b;
+            --accent-3: #89a8ff;
+            --line: rgba(255, 255, 255, 0.12);
+            --shadow: 0 30px 90px rgba(0, 0, 0, 0.45);
           }
 
           * { box-sizing: border-box; }
           body {
             margin: 0;
-            font-family: "Segoe UI", "IBM Plex Sans", system-ui, sans-serif;
+            font-family: "IBM Plex Sans", system-ui, sans-serif;
             color: var(--text);
             background:
-              radial-gradient(circle at top left, rgba(255, 207, 112, 0.35), transparent 28%),
-              radial-gradient(circle at top right, rgba(118, 227, 196, 0.22), transparent 24%),
-              linear-gradient(180deg, #d7d39b 0%, #e7e3be 30%, #f3eed8 100%);
+              radial-gradient(circle at 8% 10%, rgba(255, 209, 107, 0.18), transparent 24%),
+              radial-gradient(circle at 92% 8%, rgba(137, 168, 255, 0.24), transparent 28%),
+              radial-gradient(circle at 30% 85%, rgba(104, 231, 194, 0.16), transparent 35%),
+              linear-gradient(180deg, var(--bg-soft) 0%, var(--bg) 75%);
             min-height: 100vh;
+            overflow-x: hidden;
+          }
+
+          body::before {
+            content: "";
+            position: fixed;
+            inset: -30vh -20vw auto -20vw;
+            height: 50vh;
+            background: linear-gradient(90deg, rgba(137, 168, 255, 0.14), rgba(104, 231, 194, 0.09), rgba(255, 209, 107, 0.11));
+            filter: blur(48px);
+            pointer-events: none;
+            animation: drift 12s ease-in-out infinite alternate;
+            z-index: 0;
+          }
+
+          @keyframes drift {
+            from { transform: translateX(-3%); }
+            to { transform: translateX(3%); }
+          }
+
+          @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
           }
 
           .shell {
-            max-width: 1200px;
-            margin: 32px auto;
-            padding: 24px;
+            position: relative;
+            z-index: 2;
+            max-width: 1220px;
+            margin: 26px auto;
+            padding: 22px;
           }
 
           .hero {
             background: var(--panel);
             border: 1px solid var(--line);
-            border-radius: 28px;
+            border-radius: 30px;
             box-shadow: var(--shadow);
             overflow: hidden;
+            backdrop-filter: blur(9px);
           }
 
           .hero-top {
-            padding: 28px 28px 18px;
+            padding: 32px 30px 20px;
             border-bottom: 1px solid var(--line);
             background:
-              linear-gradient(135deg, rgba(118, 227, 196, 0.12), transparent 45%),
-              linear-gradient(225deg, rgba(255, 207, 112, 0.12), transparent 35%);
+              linear-gradient(120deg, rgba(137, 168, 255, 0.14), transparent 42%),
+              linear-gradient(220deg, rgba(104, 231, 194, 0.14), transparent 36%),
+              linear-gradient(340deg, rgba(255, 209, 107, 0.11), transparent 30%);
+            animation: fadeUp 0.8s ease both;
           }
 
           .eyebrow {
@@ -92,22 +126,25 @@ LANDING_PAGE = dedent(
             gap: 8px;
             padding: 8px 12px;
             border-radius: 999px;
-            background: rgba(255, 255, 255, 0.06);
+            background: rgba(255, 255, 255, 0.07);
             color: var(--accent);
             font-size: 13px;
+            font-weight: 600;
             letter-spacing: 0.08em;
             text-transform: uppercase;
           }
 
           h1 {
             margin: 18px 0 10px;
-            font-size: clamp(34px, 6vw, 62px);
-            line-height: 0.95;
+            font-family: "Space Grotesk", "IBM Plex Sans", system-ui, sans-serif;
+            font-size: clamp(34px, 6vw, 64px);
+            line-height: 0.92;
             letter-spacing: -0.03em;
+            max-width: 900px;
           }
 
           .lead {
-            max-width: 760px;
+            max-width: 790px;
             color: var(--muted);
             font-size: 18px;
             line-height: 1.6;
@@ -128,23 +165,62 @@ LANDING_PAGE = dedent(
             padding: 12px 16px;
             border-radius: 14px;
             text-decoration: none;
-            font-weight: 600;
+            font-weight: 700;
+            font-family: "Space Grotesk", "IBM Plex Sans", system-ui, sans-serif;
             border: 1px solid var(--line);
             color: var(--text);
-            background: rgba(255, 255, 255, 0.04);
+            background: rgba(255, 255, 255, 0.03);
+            transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+          }
+
+          .button:hover {
+            transform: translateY(-1px);
+            border-color: rgba(255, 255, 255, 0.28);
+            background: rgba(255, 255, 255, 0.08);
           }
 
           .button.primary {
-            background: linear-gradient(135deg, var(--accent), #58b7f7);
-            color: #08111e;
+            background: linear-gradient(135deg, var(--accent), var(--accent-3));
+            color: #0b1220;
             border: none;
+            box-shadow: 0 12px 30px rgba(104, 231, 194, 0.22);
+          }
+
+          .metrics {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+            max-width: 560px;
+          }
+
+          .metric {
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.04);
+          }
+
+          .metric strong {
+            display: block;
+            font-family: "Space Grotesk", sans-serif;
+            font-size: 22px;
+            line-height: 1;
+            margin-bottom: 6px;
+          }
+
+          .metric span {
+            color: var(--muted);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
           }
 
           .grid {
             display: grid;
             grid-template-columns: repeat(12, 1fr);
             gap: 18px;
-            padding: 22px 28px 28px;
+            padding: 24px 30px 30px;
           }
 
           .card {
@@ -153,6 +229,14 @@ LANDING_PAGE = dedent(
             border: 1px solid var(--line);
             border-radius: 22px;
             padding: 20px;
+            animation: fadeUp 0.65s ease both;
+            transition: border-color 160ms ease, transform 160ms ease, background 160ms ease;
+          }
+
+          .card:hover {
+            border-color: rgba(255, 255, 255, 0.26);
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.08);
           }
 
           .card.wide { grid-column: span 6; }
@@ -161,6 +245,7 @@ LANDING_PAGE = dedent(
           .label {
             color: var(--accent-2);
             font-size: 12px;
+            font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.08em;
             margin-bottom: 10px;
@@ -176,11 +261,6 @@ LANDING_PAGE = dedent(
             line-height: 1.6;
           }
 
-          ul {
-            margin: 0;
-            padding-left: 18px;
-          }
-
           code, pre {
             font-family: "IBM Plex Mono", "Cascadia Code", Consolas, monospace;
           }
@@ -192,7 +272,8 @@ LANDING_PAGE = dedent(
             border-radius: 16px;
             background: rgba(0, 0, 0, 0.24);
             border: 1px solid rgba(255, 255, 255, 0.08);
-            color: #cde8dc;
+            color: #d8ffee;
+            font-size: 14px;
           }
 
           .pill-row {
@@ -208,13 +289,15 @@ LANDING_PAGE = dedent(
             background: rgba(255, 255, 255, 0.06);
             border: 1px solid var(--line);
             color: var(--text);
-            font-size: 14px;
+            font-size: 13px;
+            font-weight: 500;
           }
 
           @media (max-width: 900px) {
             .card, .card.wide, .card.full { grid-column: span 12; }
             .shell { padding: 14px; margin: 14px auto; }
             .hero-top, .grid { padding-left: 18px; padding-right: 18px; }
+            .metrics { grid-template-columns: 1fr; max-width: none; }
           }
         </style>
       </head>
@@ -222,7 +305,7 @@ LANDING_PAGE = dedent(
         <main class="shell">
           <section class="hero">
             <div class="hero-top">
-              <div class="eyebrow">OpenEnv • Data Pipeline Debugging</div>
+              <div class="eyebrow">OpenEnv | Data Pipeline Debugging</div>
               <h1>Debug ETL pipelines like a real data team.</h1>
               <p class="lead">
                 This environment evaluates whether an agent can diagnose and repair broken
@@ -232,6 +315,11 @@ LANDING_PAGE = dedent(
               <div class="actions">
                 <a class="button primary" href="/docs">Open API Docs</a>
                 <a class="button" href="/openapi.json">OpenAPI Schema</a>
+              </div>
+              <div class="metrics">
+                <div class="metric"><strong>3</strong><span>Difficulty Levels</span></div>
+                <div class="metric"><strong>1.00</strong><span>Max Step Reward</span></div>
+                <div class="metric"><strong>Deterministic</strong><span>Grading</span></div>
               </div>
             </div>
 
@@ -313,3 +401,4 @@ if __name__ == "__main__":
     parser.add_argument("--port", type=int, default=8000)
     args = parser.parse_args()
     main(port=args.port)
+
