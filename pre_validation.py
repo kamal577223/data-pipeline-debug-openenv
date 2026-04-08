@@ -185,9 +185,9 @@ def check_tasks_with_graders() -> None:
             },
         )
         reward = float(step.get("reward", 0.0) or 0.0)
-        if reward < 0.0 or reward > 1.0:
-            fail("3+ tasks with graders", f"{task_id} reward out of range: {reward}")
-    ok("3+ tasks with graders", "enumerated all tasks, reward range is 0.0..1.0")
+        if not (0.0 < reward < 1.0):
+            fail("3+ tasks with graders", f"{task_id} reward must be strictly between 0 and 1: {reward}")
+    ok("3+ tasks with graders", "enumerated all tasks, reward range is strictly (0.0, 1.0)")
 
 
 def main() -> None:

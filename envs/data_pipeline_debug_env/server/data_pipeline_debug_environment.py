@@ -372,8 +372,8 @@ class DataPipelineDebugEnvironment(
         except ValidationError as exc:
             passed = False
             feedback = f"Action validation failed: {exc}"
-            score = 0.0
-            reward = 0.0
+            score = self._strict_unit_interval(0.0)
+            reward = self._strict_unit_interval(0.0)
             reward_breakdown = {"validation_error_penalty": 0.0}
 
         self._state.best_score = max(self._state.best_score, score)
@@ -638,4 +638,9 @@ class DataPipelineDebugEnvironment(
         )
         penalties = components["safety_penalty"] + components["runtime_penalty"]
         score = base - penalties
-        return float(max(0.0, min(1.0, score)))
+        return self._strict_unit_interval(score)
+
+    def _strict_unit_interval(self, value: float) -> float:
+        """Clamp scores/rewards to the open interval (0, 1) for validator compatibility."""
+        epsilon = 0.01
+        return float(max(epsilon, min(1.0 - epsilon, value)))

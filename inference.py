@@ -69,6 +69,11 @@ def _safe_error(value: str | None) -> str:
     return _sanitize_single_line(value, limit=240)
 
 
+def _strict_unit_interval(value: float) -> float:
+    epsilon = 0.01
+    return float(max(epsilon, min(1.0 - epsilon, value)))
+
+
 def log_start(task: str, env: str, model: str) -> None:
     print(f"[START] task={task} env={env} model={model}", flush=True)
 
@@ -174,8 +179,8 @@ def run_task(client: OpenAI, difficulty: str, task_id: str) -> None:
             log_step(step=step, action=last_action, reward=reward, done=done, error=last_error)
 
             score = float(obs.get("reward", reward))
-            score = max(0.0, min(1.0, score))
-            success = bool(obs.get("passed", False)) and score >= 0.0 and score <= 1.0
+            score = _strict_unit_interval(score)
+            success = bool(obs.get("passed", False)) and 0.0 < score < 1.0
             break
 
     except Exception as exc:
@@ -185,7 +190,7 @@ def run_task(client: OpenAI, difficulty: str, task_id: str) -> None:
             steps_taken = 1
             rewards.append(0.0)
         success = False
-        score = 0.0
+        score = _strict_unit_interval(0.0)
     finally:
         log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
 
