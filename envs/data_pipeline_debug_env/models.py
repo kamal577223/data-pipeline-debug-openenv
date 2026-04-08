@@ -60,6 +60,29 @@ class DataPipelineDebugObservation(OpenEnvObservation):
     passed: bool = Field(default=False, description="Whether the submission passed grading.")
     reward: float = Field(default=0.0, description="Reward assigned by the environment.")
     done: bool = Field(default=False, description="Whether the episode is finished.")
+    score: float = Field(
+        default=0.0,
+        description="Normalized grader score in range [0.0, 1.0].",
+    )
+    attempts_remaining: int = Field(
+        default=0,
+        description="How many repair attempts are left in the episode.",
+    )
+    reward_breakdown: dict[str, float] = Field(
+        default_factory=dict,
+        description="Deterministic reward components for transparency/debugging.",
+    )
+
+
+class DataPipelineDebugReward(BaseModel):
+    """Typed reward payload used for rubric/documentation compliance."""
+
+    reward: float = Field(..., ge=0.0, le=1.0, description="Per-step reward in [0.0, 1.0].")
+    score: float = Field(..., ge=0.0, le=1.0, description="Current task score in [0.0, 1.0].")
+    reward_breakdown: dict[str, float] = Field(
+        default_factory=dict,
+        description="Individual reward terms used to construct the final reward.",
+    )
 
 
 class DataPipelineDebugState(OpenEnvState):
@@ -70,3 +93,6 @@ class DataPipelineDebugState(OpenEnvState):
     task_id: str | None = Field(default=None)
     difficulty: str | None = Field(default=None)
     completed: bool = Field(default=False)
+    max_attempts: int = Field(default=3)
+    attempts_remaining: int = Field(default=3)
+    best_score: float = Field(default=0.0)

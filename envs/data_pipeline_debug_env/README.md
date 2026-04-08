@@ -37,11 +37,38 @@ The agent receives a broken data pipeline and must submit repaired Python code. 
 
 ## Episode Format
 
-Each episode is a single repair attempt:
+Each episode supports up to 3 repair attempts:
 
 1. `reset()` returns the task prompt, broken pipeline, and expected contract.
 2. `step()` accepts a `DataPipelineDebugAction(candidate_pipeline=...)`.
-3. The environment executes the repaired code and returns pass/fail feedback.
+3. The environment executes the repaired code and returns dense reward + score.
+4. Episode ends when task passes or attempts are exhausted.
+
+## Action / Observation / Reward Space
+
+- `Action`: `candidate_pipeline` (required), optional `metadata` containing `difficulty` and `task_id`.
+- `Observation`:
+  - core task fields: `task_id`, `difficulty`, `prompt`, `broken_pipeline`, `expected_contract`
+  - trajectory fields: `done`, `reward`, `score`, `attempts_remaining`, `feedback`, `passed`
+  - grader transparency: `reward_breakdown`
+- `Reward` (typed in code as `DataPipelineDebugReward`):
+  - bounded in `[0.0, 1.0]`
+  - deterministic weighted sum of schema/type/value quality
+  - explicit penalties for unsafe patterns and runtime/compile failures
+
+## Reward Function
+
+Each step computes a dense reward:
+
+- positive signal:
+  - `schema_score` (35%)
+  - `type_score` (25%)
+  - `value_score` (40%)
+- penalties:
+  - `safety_penalty` for clearly undesirable patterns (`subprocess`, unsafe I/O, etc.)
+  - `runtime_penalty` for compile/runtime failures
+
+Final step reward is clamped to `[0.0, 1.0]`.
 
 ## Quick Start
 
@@ -128,6 +155,36 @@ Run these checks from the repository root:
 ```bash
 python -m unittest tests.test_data_pipeline_debug_env -v
 python -m compileall envs/data_pipeline_debug_env tests/test_data_pipeline_debug_env.py
+python pre_validation.py
+```
+
+## Baseline Inference
+
+Root script: `inference.py`
+
+- uses OpenAI client for all model calls
+- reads:
+  - `API_BASE_URL`
+  - `MODEL_NAME`
+  - `OPENAI_API_KEY` (preferred) or `HF_TOKEN` (fallback)
+  - `LOCAL_IMAGE_NAME` (for local image workflow compatibility)
+- emits strict log lines:
+  - `[START] ...`
+  - `[STEP] ...`
+  - `[END] ...`
+
+Example run:
+
+```bash
+python inference.py
+```
+
+Reference baseline (deterministic local reference solver from tests):
+
+- easy: `1.00`
+- medium: `1.00`
+- hard: `1.00`
+- mean: `1.00`
 ```
 
 ## Project Structure

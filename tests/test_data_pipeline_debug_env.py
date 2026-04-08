@@ -58,6 +58,8 @@ def run_pipeline(rows):
         self.assertTrue(result.passed)
         self.assertEqual(result.reward, 1.0)
         self.assertTrue(result.done)
+        self.assertEqual(result.score, 1.0)
+        self.assertEqual(result.attempts_remaining, 2)
 
     def test_medium_task_fails_with_broken_submission(self):
         self.env.reset(difficulty="medium")
@@ -70,7 +72,10 @@ def run_pipeline(payload):
             )
         )
         self.assertFalse(result.passed)
-        self.assertEqual(result.reward, 0.0)
+        self.assertGreaterEqual(result.reward, 0.0)
+        self.assertLessEqual(result.reward, 1.0)
+        self.assertFalse(result.done)
+        self.assertEqual(result.attempts_remaining, 2)
         self.assertIn("Output values do not match expected results.", result.feedback)
 
     def test_hard_task_passes_with_dependency_safe_fix(self):
@@ -127,6 +132,37 @@ def run_pipeline(raw_orders):
         )
         self.assertTrue(result.passed)
         self.assertEqual(result.reward, 1.0)
+        self.assertEqual(result.score, 1.0)
+        self.assertTrue(result.done)
+
+    def test_episode_ends_after_max_attempts(self):
+        self.env.reset(difficulty="easy")
+        bad = DataPipelineDebugAction(candidate_pipeline="def run_pipeline(rows):\n    return []")
+
+        one = self.env.step(bad)
+        two = self.env.step(bad)
+        three = self.env.step(bad)
+
+        self.assertFalse(one.done)
+        self.assertFalse(two.done)
+        self.assertTrue(three.done)
+        self.assertEqual(three.attempts_remaining, 0)
+        self.assertGreaterEqual(three.score, 0.0)
+        self.assertLessEqual(three.score, 1.0)
+
+    def test_safety_penalty_is_applied(self):
+        self.env.reset(difficulty="easy")
+        result = self.env.step(
+            DataPipelineDebugAction(
+                candidate_pipeline="""
+import os
+def run_pipeline(rows):
+    return []
+""".strip()
+            )
+        )
+        self.assertIn("safety_penalty", result.reward_breakdown)
+        self.assertGreater(result.reward_breakdown["safety_penalty"], 0.0)
 
     def test_default_reset_cycles_through_tasks(self):
         first = self.env.reset()

@@ -4,7 +4,7 @@ Inference Script - data-pipeline-debug-openenv
 MANDATORY VARIABLES
 - API_BASE_URL
 - MODEL_NAME
-- HF_TOKEN
+- OPENAI_API_KEY (preferred) / HF_TOKEN (fallback)
 - LOCAL_IMAGE_NAME (only used when running via local Docker image workflow)
 
 STDOUT FORMAT (strict):
@@ -27,6 +27,7 @@ from openai import OpenAI
 
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 HF_TOKEN = os.getenv("HF_TOKEN", "")
 LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME", "")
 ENV_BASE_URL = os.getenv("ENV_BASE_URL", "https://kamal2525-data-pipeline-debug-openenv.hf.space").rstrip("/")
@@ -190,8 +191,9 @@ def run_task(client: OpenAI, difficulty: str, task_id: str) -> None:
 
 
 def main() -> None:
-    if not HF_TOKEN:
-        raise SystemExit("HF_TOKEN is required")
+    api_key = OPENAI_API_KEY or HF_TOKEN
+    if not api_key:
+        raise SystemExit("OPENAI_API_KEY or HF_TOKEN is required")
     if not API_BASE_URL:
         raise SystemExit("API_BASE_URL is required")
     if not MODEL_NAME:
@@ -206,11 +208,10 @@ def main() -> None:
     health = HTTP.get(f"{ENV_BASE_URL}/health", timeout=30)
     health.raise_for_status()
 
-    client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
+    client = OpenAI(base_url=API_BASE_URL, api_key=api_key)
     for difficulty, task_id in TASKS:
         run_task(client, difficulty, task_id)
 
 
 if __name__ == "__main__":
     main()
-

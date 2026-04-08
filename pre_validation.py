@@ -131,7 +131,29 @@ def check_inference_script() -> None:
     if not inference.exists():
         fail("Baseline reproduces", "missing root inference.py")
     text = inference.read_text(encoding="utf-8")
-    for required in ["API_BASE_URL", "MODEL_NAME", "HF_TOKEN", "OpenAI(", "[START]", "[STEP]", "[END]"]:
+    required_tokens = [
+        "API_BASE_URL",
+        "MODEL_NAME",
+        "OPENAI_API_KEY",
+        "HF_TOKEN",
+        "LOCAL_IMAGE_NAME",
+        "OpenAI(",
+        "[START]",
+        "[STEP]",
+        "[END]",
+        "task=",
+        "env=",
+        "model=",
+        "action=",
+        "reward=",
+        "done=",
+        "error=",
+        "success=",
+        "steps=",
+        "score=",
+        "rewards=",
+    ]
+    for required in required_tokens:
         if required not in text:
             fail("Baseline reproduces", f"inference.py missing token: {required}")
     ok("Baseline reproduces", "inference.py present with required env vars and log markers")

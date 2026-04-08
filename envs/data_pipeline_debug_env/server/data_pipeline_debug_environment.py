@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import dataclass
+import math
 from textwrap import dedent
 from typing import Any, Generic, TypeVar
 import json
@@ -306,6 +307,7 @@ class DataPipelineDebugEnvironment(
     SUPPORTS_CONCURRENT_SESSIONS = True
 
     def __init__(self):
+        self._max_attempts = 3
         self._tasks = _build_tasks()
         self._task_order = [
             "easy_csv_null_type",
@@ -337,8 +339,15 @@ class DataPipelineDebugEnvironment(
             task_id=self._current_task.task_id,
             difficulty=self._current_task.difficulty,
             completed=False,
+            max_attempts=self._max_attempts,
+            attempts_remaining=self._max_attempts,
+            best_score=0.0,
         )
-        return self._make_observation()
+        return self._make_observation(
+            score=0.0,
+            attempts_remaining=self._state.attempts_remaining,
+            reward_breakdown={},
+        )
 
     def step(self, action: DataPipelineDebugAction) -> DataPipelineDebugObservation:
         if self._current_task is None:
@@ -357,19 +366,30 @@ class DataPipelineDebugEnvironment(
             result = self._grade_candidate(action.candidate_pipeline, self._current_task)
             passed = result["passed"]
             feedback = result["feedback"]
-            reward = 1.0 if passed else 0.0
+            score = float(result["score"])
+            reward_breakdown = result["reward_breakdown"]
+            reward = float(result["reward"])
         except ValidationError as exc:
             passed = False
             feedback = f"Action validation failed: {exc}"
+            score = 0.0
             reward = 0.0
+            reward_breakdown = {"validation_error_penalty": 0.0}
 
-        self._state.completed = True
+        self._state.best_score = max(self._state.best_score, score)
+        self._state.attempts_remaining = max(0, self._state.attempts_remaining - 1)
+        done = passed or self._state.attempts_remaining == 0
+
+        self._state.completed = done
         return self._make_observation(
             last_submission=action.candidate_pipeline,
             feedback=feedback,
             passed=passed,
             reward=reward,
-            done=True,
+            done=done,
+            score=score,
+            attempts_remaining=self._state.attempts_remaining,
+            reward_breakdown=reward_breakdown,
         )
 
     @property
@@ -396,6 +416,9 @@ class DataPipelineDebugEnvironment(
         passed: bool = False,
         reward: float = 0.0,
         done: bool = False,
+        score: float = 0.0,
+        attempts_remaining: int = 0,
+        reward_breakdown: dict[str, float] | None = None,
     ) -> DataPipelineDebugObservation:
         if self._current_task is None:
             raise RuntimeError("No active task available.")
@@ -411,37 +434,88 @@ class DataPipelineDebugEnvironment(
             passed=passed,
             reward=reward,
             done=done,
+            score=score,
+            attempts_remaining=attempts_remaining,
+            reward_breakdown=reward_breakdown or {},
         )
 
     def _grade_candidate(self, candidate_pipeline: str, task: PipelineTask) -> dict[str, Any]:
+        score_components = {
+            "schema_score": 0.0,
+            "type_score": 0.0,
+            "value_score": 0.0,
+            "safety_penalty": 0.0,
+            "runtime_penalty": 0.0,
+        }
+        issues: list[str] = []
+
+        safety_penalty = self._static_safety_penalty(candidate_pipeline)
+        score_components["safety_penalty"] = safety_penalty
+
         namespace: dict[str, Any] = {"__builtins__": SafeBuiltins}
-        exec(candidate_pipeline, namespace, namespace)
+        try:
+            exec(candidate_pipeline, namespace, namespace)
+        except Exception as exc:
+            formatted = "".join(traceback.format_exception_only(type(exc), exc)).strip()
+            score_components["runtime_penalty"] = 0.35
+            score = self._combine_score(score_components)
+            return {
+                "passed": False,
+                "feedback": f"Compilation error: {formatted}",
+                "score": score,
+                "reward": score,
+                "reward_breakdown": score_components,
+            }
 
         if task.entrypoint not in namespace or not callable(namespace[task.entrypoint]):
+            score_components["runtime_penalty"] = 0.25
+            score = self._combine_score(score_components)
             return {
                 "passed": False,
                 "feedback": f"Your submission must define a callable `{task.entrypoint}`.",
+                "score": score,
+                "reward": score,
+                "reward_breakdown": score_components,
             }
 
         try:
             actual_output = namespace[task.entrypoint](deepcopy(task.input_data))
         except Exception as exc:
             formatted = "".join(traceback.format_exception_only(type(exc), exc)).strip()
+            score_components["runtime_penalty"] = 0.30
+            score = self._combine_score(score_components)
             return {
                 "passed": False,
                 "feedback": f"Pipeline raised an exception during execution: {formatted}",
+                "score": score,
+                "reward": score,
+                "reward_breakdown": score_components,
             }
 
-        issues = self._validate_output(actual_output, task.expected_output, task.expected_contract)
+        validation = self._validate_output(actual_output, task.expected_output, task.expected_contract)
+        issues = validation["issues"]
+        score_components["schema_score"] = validation["schema_score"]
+        score_components["type_score"] = validation["type_score"]
+        score_components["value_score"] = validation["value_score"]
+
+        score = self._combine_score(score_components)
+        passed = bool(validation["passed"])
+
         if issues:
             return {
-                "passed": False,
+                "passed": passed,
                 "feedback": " ; ".join(issues),
+                "score": score,
+                "reward": score,
+                "reward_breakdown": score_components,
             }
 
         return {
-            "passed": True,
+            "passed": passed,
             "feedback": "All checks passed: output schema, values, and types match the expected contract.",
+            "score": score,
+            "reward": score,
+            "reward_breakdown": score_components,
         }
 
     def _validate_output(
@@ -449,22 +523,45 @@ class DataPipelineDebugEnvironment(
         actual_output: Any,
         expected_output: Any,
         expected_contract: dict[str, Any],
-    ) -> list[str]:
+    ) -> dict[str, Any]:
         issues: list[str] = []
+        schema_score = 0.0
+        type_score = 0.0
+        value_score = 0.0
 
         if not isinstance(actual_output, list):
-            return ["Output must be a list of dictionaries."]
+            return {
+                "passed": False,
+                "issues": ["Output must be a list of dictionaries."],
+                "schema_score": 0.0,
+                "type_score": 0.0,
+                "value_score": 0.0,
+            }
 
         if not all(isinstance(row, dict) for row in actual_output):
-            return ["Every output row must be a dictionary."]
+            return {
+                "passed": False,
+                "issues": ["Every output row must be a dictionary."],
+                "schema_score": 0.0,
+                "type_score": 0.0,
+                "value_score": 0.0,
+            }
 
         schema = expected_contract.get("schema", {})
+        expected_fields = len(schema)
+        total_rows = max(1, len(expected_output))
+        total_field_checks = max(1, total_rows * max(1, expected_fields))
+        present_fields = 0
+        typed_fields = 0
+
         for index, row in enumerate(actual_output):
             missing = [field for field in schema if field not in row]
             if missing:
                 issues.append(f"Row {index} is missing fields: {missing}")
-                continue
+            present_fields += expected_fields - len(missing)
             for field, expected_type in schema.items():
+                if field not in row:
+                    continue
                 value = row[field]
                 if expected_type == "int" and not isinstance(value, int):
                     issues.append(f"Row {index} field `{field}` must be int.")
@@ -472,6 +569,11 @@ class DataPipelineDebugEnvironment(
                     issues.append(f"Row {index} field `{field}` must be float.")
                 elif expected_type == "str" and not isinstance(value, str):
                     issues.append(f"Row {index} field `{field}` must be str.")
+                else:
+                    typed_fields += 1
+
+        schema_score = min(1.0, present_fields / total_field_checks)
+        type_score = min(1.0, typed_fields / total_field_checks)
 
         if "row_count" in expected_contract and len(actual_output) != expected_contract["row_count"]:
             issues.append(
@@ -482,7 +584,58 @@ class DataPipelineDebugEnvironment(
             sort_key = expected_contract["sort_by"]
             actual_output = sorted(actual_output, key=lambda row: row[sort_key])
 
-        if _normalize_json(actual_output) != _normalize_json(expected_output):
+        actual_norm = _normalize_json(actual_output)
+        expected_norm = _normalize_json(expected_output)
+        if actual_norm != expected_norm:
             issues.append("Output values do not match expected results.")
+            value_score = self._approximate_value_score(actual_output, expected_output)
+        else:
+            value_score = 1.0
 
-        return issues
+        return {
+            "passed": len(issues) == 0,
+            "issues": issues,
+            "schema_score": schema_score,
+            "type_score": type_score,
+            "value_score": value_score,
+        }
+
+    def _static_safety_penalty(self, code: str) -> float:
+        lowered = code.lower()
+        blocked_tokens = [
+            "import os",
+            "import subprocess",
+            "subprocess.",
+            "open(",
+            "__import__",
+            "socket",
+            "requests.",
+        ]
+        penalty_hits = sum(1 for token in blocked_tokens if token in lowered)
+        if penalty_hits == 0:
+            return 0.0
+        return min(0.30, 0.10 * penalty_hits)
+
+    def _approximate_value_score(self, actual_output: Any, expected_output: Any) -> float:
+        if not isinstance(actual_output, list) or not isinstance(expected_output, list):
+            return 0.0
+        expected_len = max(1, len(expected_output))
+        comparable_len = min(len(actual_output), len(expected_output))
+        if comparable_len == 0:
+            return 0.0
+        matches = 0
+        for idx in range(comparable_len):
+            if _normalize_json(actual_output[idx]) == _normalize_json(expected_output[idx]):
+                matches += 1
+        return max(0.0, min(1.0, matches / expected_len))
+
+    def _combine_score(self, components: dict[str, float]) -> float:
+        # Dense reward signal with deterministic penalties.
+        base = (
+            0.35 * components["schema_score"]
+            + 0.25 * components["type_score"]
+            + 0.40 * components["value_score"]
+        )
+        penalties = components["safety_penalty"] + components["runtime_penalty"]
+        score = base - penalties
+        return float(max(0.0, min(1.0, score)))
