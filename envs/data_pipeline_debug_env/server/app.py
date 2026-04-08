@@ -353,19 +353,24 @@ LANDING_PAGE = dedent(
               </article>
 
               <article class="card wide">
-                <div class="label">Why You Saw Not Found</div>
+                <div class="label">Evaluation Signal</div>
                 <p>
-                  The backend originally exposed only API endpoints, so visiting the Space root showed FastAPI's
-                  default <code>{"detail":"Not Found"}</code> response. This page is the custom landing layer on top
-                  of the environment API.
+                  Rewards are dense and deterministic. Each step combines schema correctness, type fidelity,
+                  and output-value accuracy, with explicit penalties for unsafe or broken code paths.
                 </p>
+                <div class="pill-row">
+                  <span class="pill">schema score (35%)</span>
+                  <span class="pill">type score (25%)</span>
+                  <span class="pill">value score (40%)</span>
+                  <span class="pill">bounded reward [0.0-1.0]</span>
+                </div>
               </article>
 
               <article class="card full">
-                <div class="label">Quick API Flow</div>
-                <pre>1. Reset an episode to get a task prompt and broken pipeline
-2. Submit repaired Python code in `candidate_pipeline`
-3. Receive deterministic grading feedback and reward</pre>
+                <div class="label">Built For Teams</div>
+                <pre>• Reproduces real ETL debugging workflows used in data teams
+• Supports curriculum-style evaluation from easy to hard dependency chains
+• Gives transparent grader signals for model iteration and benchmarking</pre>
               </article>
             </div>
           </section>
@@ -401,4 +406,3 @@ if __name__ == "__main__":
     parser.add_argument("--port", type=int, default=8000)
     args = parser.parse_args()
     main(port=args.port)
-
