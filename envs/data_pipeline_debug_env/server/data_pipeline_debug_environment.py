@@ -22,7 +22,10 @@ except ImportError:
     class Environment(Generic[ActT, ObsT, StateT]):
         """Minimal fallback for local development without openenv."""
 
-from ..models import DataPipelineDebugAction, DataPipelineDebugObservation, DataPipelineDebugState
+try:
+    from ..models import DataPipelineDebugAction, DataPipelineDebugObservation, DataPipelineDebugState
+except ImportError:
+    from models import DataPipelineDebugAction, DataPipelineDebugObservation, DataPipelineDebugState
 
 
 SafeBuiltins = {
