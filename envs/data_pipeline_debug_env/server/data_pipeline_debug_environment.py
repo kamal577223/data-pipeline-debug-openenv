@@ -342,7 +342,8 @@ class DataPipelineDebugEnvironment(
 
     def step(self, action: DataPipelineDebugAction) -> DataPipelineDebugObservation:
         if self._current_task is None:
-            # Some HTTP clients may call /step without sticky session state.
+            # NOTE: Keep this fallback for stateless HTTP invocations.
+            # Some clients may call /step without sticky session state.
             # Recover by selecting a task from metadata or defaults.
             metadata = getattr(action, "metadata", {}) or {}
             self.reset(
