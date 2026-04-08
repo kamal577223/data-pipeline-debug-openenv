@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openenv-data_pipeline_debug_env"
+version = "0.1.0"
+description = "Data pipeline debugging environment for OpenEnv."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "openenv-core[core]>=0.2.2",
+  "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0.0",
+  "pytest-cov>=4.0.0",
+]
+
+[project.scripts]
+server = "data_pipeline_debug_env.server.app:main"
+
+[tool.setuptools]
+include-package-data = true
+packages = ["data_pipeline_debug_env", "data_pipeline_debug_env.server"]
+package-dir = { "data_pipeline_debug_env" = ".", "data_pipeline_debug_env.server" = "server" }
