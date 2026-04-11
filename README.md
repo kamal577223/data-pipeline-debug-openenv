@@ -9,7 +9,7 @@ Data Pipeline Debug OpenEnv is a real-world environment for evaluating whether a
 - GitHub (this project): [kamal577223/data-pipeline-debug-openenv](https://github.com/kamal577223/data-pipeline-debug-openenv)
 - Hugging Face Space page: [KAMAL2525/data-pipeline-debug-openenv](https://huggingface.co/spaces/KAMAL2525/data-pipeline-debug-openenv)
 - Hugging Face runtime URL: [kamal2525-data-pipeline-debug-openenv.hf.space](https://kamal2525-data-pipeline-debug-openenv.hf.space)
-- OpenEnv reference format used: [meta-pytorch/OpenEnv/envs/reasoning_gym_env](https://github.com/meta-pytorch/OpenEnv/tree/main/envs/reasoning_gym_env)
+
 
 
 ## Why This Environment
