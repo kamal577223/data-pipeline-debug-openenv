@@ -1,5 +1,7 @@
 # Data Pipeline Debug OpenEnv
 
+Live Hugging Face Space: https://kamal2525-data-pipeline-debug-openenv.hf.space
+
 Data Pipeline Debug OpenEnv is a real-world environment for evaluating whether an agent can diagnose and repair broken ETL/data pipelines. Instead of solving toy tasks, the agent must fix executable Python pipeline logic under schema drift, null/type issues, and dependency-chain failures.
 
 ## Important Links
