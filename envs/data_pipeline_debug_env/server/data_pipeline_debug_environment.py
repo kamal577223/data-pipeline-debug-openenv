@@ -360,6 +360,19 @@ class DataPipelineDebugEnvironment(
                 task_id=metadata.get("task_id"),
             )
 
+        if self._state.completed:
+            # Protect terminal episodes from additional mutations.
+            return self._make_observation(
+                last_submission=action.candidate_pipeline,
+                feedback="Episode already completed. Call reset() to start a new task.",
+                passed=False,
+                reward=self._strict_unit_interval(0.0),
+                done=True,
+                score=self._state.best_score,
+                attempts_remaining=self._state.attempts_remaining,
+                reward_breakdown={"post_episode_penalty": 0.0},
+            )
+
         self._state.step_count += 1
 
         try:

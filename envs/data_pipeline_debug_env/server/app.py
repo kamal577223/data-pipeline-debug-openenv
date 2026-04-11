@@ -391,6 +391,22 @@ async def landing_page_web() -> str:
     return LANDING_PAGE
 
 
+@app.get("/metadata", include_in_schema=False)
+async def metadata() -> dict[str, object]:
+    """Hackathon-friendly metadata endpoint for quick environment introspection."""
+    return {
+        "name": "data_pipeline_debug_env",
+        "domain": "Data Pipeline Debugging",
+        "tasks": [
+            {"difficulty": "easy", "task_id": "easy_csv_null_type"},
+            {"difficulty": "medium", "task_id": "medium_schema_drift"},
+            {"difficulty": "hard", "task_id": "hard_dependency_chain"},
+        ],
+        "reward_range": {"min_exclusive": 0.0, "max_exclusive": 1.0},
+        "max_attempts_per_episode": 3,
+    }
+
+
 def main():
     """Run the server locally."""
 

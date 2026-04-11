@@ -1,0 +1,24 @@
+{
+  "benchmark": "data_pipeline_debug_env",
+  "by_task": {
+    "easy": {
+      "task_id": "easy_csv_null_type",
+      "score": 0.99,
+      "reward": 0.99,
+      "passed": true
+    },
+    "medium": {
+      "task_id": "medium_schema_drift",
+      "score": 0.99,
+      "reward": 0.99,
+      "passed": true
+    },
+    "hard": {
+      "task_id": "hard_dependency_chain",
+      "score": 0.99,
+      "reward": 0.99,
+      "passed": true
+    }
+  },
+  "average_score": 0.99
+}

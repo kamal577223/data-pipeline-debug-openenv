@@ -56,9 +56,11 @@ def run_pipeline(rows):
             )
         )
         self.assertTrue(result.passed)
-        self.assertEqual(result.reward, 1.0)
+        self.assertGreater(result.reward, 0.0)
+        self.assertLess(result.reward, 1.0)
         self.assertTrue(result.done)
-        self.assertEqual(result.score, 1.0)
+        self.assertGreater(result.score, 0.0)
+        self.assertLess(result.score, 1.0)
         self.assertEqual(result.attempts_remaining, 2)
 
     def test_medium_task_fails_with_broken_submission(self):
@@ -131,8 +133,10 @@ def run_pipeline(raw_orders):
             )
         )
         self.assertTrue(result.passed)
-        self.assertEqual(result.reward, 1.0)
-        self.assertEqual(result.score, 1.0)
+        self.assertGreater(result.reward, 0.0)
+        self.assertLess(result.reward, 1.0)
+        self.assertGreater(result.score, 0.0)
+        self.assertLess(result.score, 1.0)
         self.assertTrue(result.done)
 
     def test_episode_ends_after_max_attempts(self):
@@ -147,8 +151,21 @@ def run_pipeline(raw_orders):
         self.assertFalse(two.done)
         self.assertTrue(three.done)
         self.assertEqual(three.attempts_remaining, 0)
-        self.assertGreaterEqual(three.score, 0.0)
-        self.assertLessEqual(three.score, 1.0)
+        self.assertGreater(three.score, 0.0)
+        self.assertLess(three.score, 1.0)
+
+    def test_post_episode_step_requires_reset(self):
+        self.env.reset(difficulty="easy")
+        bad = DataPipelineDebugAction(candidate_pipeline="def run_pipeline(rows):\n    return []")
+        _ = self.env.step(bad)
+        _ = self.env.step(bad)
+        third = self.env.step(bad)
+        fourth = self.env.step(bad)
+
+        self.assertTrue(third.done)
+        self.assertTrue(fourth.done)
+        self.assertEqual(fourth.attempts_remaining, 0)
+        self.assertIn("Call reset()", fourth.feedback)
 
     def test_safety_penalty_is_applied(self):
         self.env.reset(difficulty="easy")
