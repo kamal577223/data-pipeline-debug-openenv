@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from textwrap import dedent
 
+from fastapi import Request
+from fastapi.responses import HTMLResponse
+from fastapi.responses import JSONResponse
+
 try:
     from openenv.core.env_server.http_server import create_app
 except Exception as e:  # pragma: no cover
@@ -21,8 +25,6 @@ try:
 except ImportError:
     from data_pipeline_debug_environment import DataPipelineDebugEnvironment
 
-from fastapi.responses import HTMLResponse
-
 app = create_app(
     DataPipelineDebugEnvironment,
     DataPipelineDebugAction,
@@ -31,6 +33,49 @@ app = create_app(
     max_concurrent_envs=1,
 )
 
+_demo_env = DataPipelineDebugEnvironment()
+
+
+def _dump_model(value):
+    if hasattr(value, "model_dump"):
+        return value.model_dump(mode="json")
+    if hasattr(value, "dict"):
+        return value.dict()
+    return value
+
+
+def _demo_payload(observation):
+    return {
+        "observation": _dump_model(observation),
+        "state": _dump_model(_demo_env.state),
+    }
+
+
+@app.post("/demo/reset", include_in_schema=False)
+async def demo_reset(request: Request) -> JSONResponse:
+    payload = await request.json()
+    try:
+        observation = _demo_env.reset(
+            difficulty=payload.get("difficulty"),
+            task_id=payload.get("task_id"),
+            episode_id=payload.get("episode_id", "demo-web"),
+        )
+    except Exception as exc:  # pragma: no cover - demo safety
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return JSONResponse(_demo_payload(observation))
+
+
+@app.post("/demo/step", include_in_schema=False)
+async def demo_step(request: Request) -> JSONResponse:
+    payload = await request.json()
+    try:
+        action = DataPipelineDebugAction.model_validate(payload)
+        observation = _demo_env.step(action)
+    except Exception as exc:  # pragma: no cover - demo safety
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return JSONResponse(_demo_payload(observation))
+
+
 LANDING_PAGE = dedent(
     """
     <!doctype html>
@@ -38,343 +83,568 @@ LANDING_PAGE = dedent(
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Data Pipeline Debug Environment</title>
+        <title>Data Pipeline Debug Command Center</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
         <style>
           :root {
-            --bg: #0e0f17;
-            --bg-soft: #191b2a;
-            --panel: rgba(18, 21, 35, 0.88);
-            --panel-soft: rgba(255, 255, 255, 0.05);
-            --text: #edf2ff;
-            --muted: #aab5cc;
-            --accent: #68e7c2;
-            --accent-2: #ffd16b;
-            --accent-3: #89a8ff;
-            --line: rgba(255, 255, 255, 0.12);
-            --shadow: 0 30px 90px rgba(0, 0, 0, 0.45);
+            --bg: #050805;
+            --surface: rgba(8, 18, 10, 0.78);
+            --text: #e8f5e9;
+            --muted: #9bc79f;
+            --line: rgba(0, 153, 0, 0.20);
+            --ok: #00cc66;
+            --warn: #ffb703;
+            --info: #a8dadc;
+            --danger: #e63946;
+            --shadow: 0 10px 32px rgba(0, 0, 0, 0.55);
           }
 
           * { box-sizing: border-box; }
+
           body {
             margin: 0;
             font-family: "IBM Plex Sans", system-ui, sans-serif;
             color: var(--text);
             background:
-              radial-gradient(circle at 8% 10%, rgba(255, 209, 107, 0.18), transparent 24%),
-              radial-gradient(circle at 92% 8%, rgba(137, 168, 255, 0.24), transparent 28%),
-              radial-gradient(circle at 30% 85%, rgba(104, 231, 194, 0.16), transparent 35%),
-              linear-gradient(180deg, var(--bg-soft) 0%, var(--bg) 75%);
+              radial-gradient(circle at 15% 10%, rgba(0, 204, 102, 0.10), transparent 28%),
+              radial-gradient(circle at 85% 75%, rgba(168, 218, 220, 0.08), transparent 30%),
+              linear-gradient(180deg, #050805 0%, #09130a 100%);
             min-height: 100vh;
-            overflow-x: hidden;
-          }
-
-          body::before {
-            content: "";
-            position: fixed;
-            inset: -30vh -20vw auto -20vw;
-            height: 50vh;
-            background: linear-gradient(90deg, rgba(137, 168, 255, 0.14), rgba(104, 231, 194, 0.09), rgba(255, 209, 107, 0.11));
-            filter: blur(48px);
-            pointer-events: none;
-            animation: drift 12s ease-in-out infinite alternate;
-            z-index: 0;
-          }
-
-          @keyframes drift {
-            from { transform: translateX(-3%); }
-            to { transform: translateX(3%); }
-          }
-
-          @keyframes fadeUp {
-            from { opacity: 0; transform: translateY(12px); }
-            to { opacity: 1; transform: translateY(0); }
           }
 
           .shell {
-            position: relative;
-            z-index: 2;
-            max-width: 1220px;
-            margin: 26px auto;
-            padding: 22px;
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 14px;
+          }
+
+          .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin: -14px -14px 14px;
+            padding: 11px 24px;
+            background: rgba(5, 8, 5, 0.90);
+            border-bottom: 1px solid var(--line);
+            backdrop-filter: blur(16px);
+          }
+
+          .brand {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+          }
+
+          .brand-mark {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(135deg, var(--ok), #0d5227);
+            color: #fff;
+            font-weight: 900;
+          }
+
+          .status {
+            padding: 7px 12px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            color: var(--ok);
+            background: rgba(255, 255, 255, 0.03);
+            font-size: 13px;
+            font-weight: 700;
           }
 
           .hero {
-            background: var(--panel);
+            background: linear-gradient(135deg, rgba(8, 18, 10, 0.94), rgba(8, 18, 10, 0.72));
             border: 1px solid var(--line);
-            border-radius: 30px;
+            border-radius: 12px;
             box-shadow: var(--shadow);
-            overflow: hidden;
-            backdrop-filter: blur(9px);
-          }
-
-          .hero-top {
-            padding: 32px 30px 20px;
-            border-bottom: 1px solid var(--line);
-            background:
-              linear-gradient(120deg, rgba(137, 168, 255, 0.14), transparent 42%),
-              linear-gradient(220deg, rgba(104, 231, 194, 0.14), transparent 36%),
-              linear-gradient(340deg, rgba(255, 209, 107, 0.11), transparent 30%);
-            animation: fadeUp 0.8s ease both;
+            padding: 22px;
           }
 
           .eyebrow {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 12px;
+            display: inline-block;
+            padding: 7px 12px;
             border-radius: 999px;
-            background: rgba(255, 255, 255, 0.07);
-            color: var(--accent);
-            font-size: 13px;
-            font-weight: 600;
+            background: rgba(0, 153, 0, 0.16);
+            color: var(--ok);
+            font-size: 12px;
+            font-weight: 700;
             letter-spacing: 0.08em;
             text-transform: uppercase;
+            margin-bottom: 14px;
           }
 
           h1 {
-            margin: 18px 0 10px;
-            font-family: "Space Grotesk", "IBM Plex Sans", system-ui, sans-serif;
-            font-size: clamp(34px, 6vw, 64px);
-            line-height: 0.92;
+            margin: 0 0 10px;
+            font-family: "Space Grotesk", sans-serif;
+            font-size: clamp(32px, 4.5vw, 54px);
+            line-height: 0.95;
             letter-spacing: -0.03em;
-            max-width: 900px;
           }
 
           .lead {
-            max-width: 790px;
+            max-width: 760px;
             color: var(--muted);
-            font-size: 18px;
-            line-height: 1.6;
+            font-size: 17px;
+            line-height: 1.65;
             margin: 0;
           }
+
+          .hero-grid,
+          .demo-grid,
+          .task-grid,
+          .endpoint-grid {
+            display: grid;
+            gap: 16px;
+            margin-top: 24px;
+          }
+
+          .hero-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+          .demo-grid { grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr); align-items: start; }
+          .task-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+          .endpoint-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
 
           .actions {
             display: flex;
             flex-wrap: wrap;
-            gap: 12px;
-            margin-top: 22px;
+            gap: 10px;
+            margin-top: 16px;
           }
 
-          .button {
+          .btn {
             display: inline-flex;
             align-items: center;
-            gap: 10px;
-            padding: 12px 16px;
-            border-radius: 14px;
+            gap: 8px;
+            padding: 11px 15px;
+            border-radius: 8px;
             text-decoration: none;
             font-weight: 700;
-            font-family: "Space Grotesk", "IBM Plex Sans", system-ui, sans-serif;
             border: 1px solid var(--line);
             color: var(--text);
-            background: rgba(255, 255, 255, 0.03);
-            transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+            background: rgba(0, 153, 0, 0.17);
           }
 
-          .button:hover {
-            transform: translateY(-1px);
-            border-color: rgba(255, 255, 255, 0.28);
-            background: rgba(255, 255, 255, 0.08);
+          .btn.secondary {
+            background: rgba(168, 218, 220, 0.12);
+            color: var(--info);
           }
 
-          .button.primary {
-            background: linear-gradient(135deg, var(--accent), var(--accent-3));
-            color: #0b1220;
-            border: none;
-            box-shadow: 0 12px 30px rgba(104, 231, 194, 0.22);
-          }
-
-          .metrics {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(120px, 1fr));
-            gap: 10px;
-            margin-top: 20px;
-            max-width: 560px;
-          }
-
-          .metric {
+          .stat, .panel, .card, .endpoint {
+            background: var(--surface);
             border: 1px solid var(--line);
-            border-radius: 14px;
-            padding: 12px;
-            background: rgba(255, 255, 255, 0.04);
+            border-radius: 10px;
+            padding: 16px;
           }
 
-          .metric strong {
+          .stat strong {
             display: block;
-            font-family: "Space Grotesk", sans-serif;
+            font-size: 28px;
+            margin-bottom: 5px;
+          }
+
+          .stat span, .card p, .endpoint p, .footnote, .small {
+            color: var(--muted);
+          }
+
+          .section {
+            margin-top: 26px;
+          }
+
+          .section h2 {
+            margin: 0 0 12px;
             font-size: 22px;
-            line-height: 1;
-            margin-bottom: 6px;
+            letter-spacing: -0.03em;
           }
 
-          .metric span {
-            color: var(--muted);
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-          }
-
-          .grid {
+          .controls {
             display: grid;
-            grid-template-columns: repeat(12, 1fr);
-            gap: 18px;
-            padding: 24px 30px 30px;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 10px;
+            margin-bottom: 12px;
           }
 
-          .card {
-            grid-column: span 4;
-            background: var(--panel-soft);
-            border: 1px solid var(--line);
-            border-radius: 22px;
-            padding: 20px;
-            animation: fadeUp 0.65s ease both;
-            transition: border-color 160ms ease, transform 160ms ease, background 160ms ease;
-          }
-
-          .card:hover {
-            border-color: rgba(255, 255, 255, 0.26);
-            transform: translateY(-2px);
-            background: rgba(255, 255, 255, 0.08);
-          }
-
-          .card.wide { grid-column: span 6; }
-          .card.full { grid-column: span 12; }
-
-          .label {
-            color: var(--accent-2);
-            font-size: 12px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            margin-bottom: 10px;
-          }
-
-          h2, h3 {
-            margin: 0 0 10px;
-            line-height: 1.1;
-          }
-
-          p, li {
+          label {
+            display: grid;
+            gap: 6px;
             color: var(--muted);
-            line-height: 1.6;
+            font-size: 12px;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+            font-weight: 700;
           }
 
-          code, pre {
+          select, textarea, input {
+            width: 100%;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #071107;
+            color: var(--text);
+            font: inherit;
+            padding: 10px 12px;
+          }
+
+          textarea {
+            min-height: 280px;
+            resize: vertical;
             font-family: "IBM Plex Mono", "Cascadia Code", Consolas, monospace;
           }
 
-          pre {
-            margin: 0;
-            padding: 16px;
-            overflow: auto;
-            border-radius: 16px;
-            background: rgba(0, 0, 0, 0.24);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            color: #d8ffee;
-            font-size: 14px;
-          }
-
-          .pill-row {
+          .button-row {
             display: flex;
-            flex-wrap: wrap;
             gap: 10px;
+            flex-wrap: wrap;
           }
 
-          .pill {
-            display: inline-flex;
-            padding: 8px 12px;
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid var(--line);
+          button {
+            border: 1px solid rgba(0, 204, 102, 0.30);
+            background: rgba(0, 153, 0, 0.18);
             color: var(--text);
-            font-size: 13px;
-            font-weight: 500;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
           }
 
-          @media (max-width: 900px) {
-            .card, .card.wide, .card.full { grid-column: span 12; }
-            .shell { padding: 14px; margin: 14px auto; }
-            .hero-top, .grid { padding-left: 18px; padding-right: 18px; }
-            .metrics { grid-template-columns: 1fr; max-width: none; }
+          button.secondary {
+            background: rgba(168, 218, 220, 0.10);
+            border-color: rgba(168, 218, 220, 0.28);
+            color: var(--info);
+          }
+
+          .badge {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--ok);
+            font-size: 12px;
+            font-weight: 700;
+          }
+
+          .kpis {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px;
+            margin-top: 12px;
+          }
+
+          .kpi {
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.03);
+          }
+
+          .kpi span {
+            display: block;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+          }
+
+          .kpi strong {
+            display: block;
+            margin-top: 6px;
+            font-size: 22px;
+          }
+
+          pre {
+            font-family: "IBM Plex Mono", "Cascadia Code", Consolas, monospace;
+            padding: 12px;
+            overflow: auto;
+            border-radius: 8px;
+            background: #020502;
+            border: 1px solid rgba(0, 153, 0, 0.16);
+            color: #d8ffee;
+            max-height: 260px;
+            margin: 0;
+            font-size: 12px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+          }
+
+          .result {
+            margin-top: 12px;
+            padding: 12px;
+            border: 1px solid rgba(0, 204, 102, 0.24);
+            background: rgba(0, 204, 102, 0.10);
+            border-radius: 8px;
+          }
+
+          .error {
+            margin-top: 12px;
+            padding: 12px;
+            border: 1px solid rgba(230, 57, 70, 0.30);
+            background: rgba(230, 57, 70, 0.12);
+            color: #ffb8c0;
+            border-radius: 8px;
+          }
+
+          .endpoint a {
+            color: var(--ok);
+            text-decoration: none;
+            font-weight: 700;
+          }
+
+          .endpoint a:hover { text-decoration: underline; }
+
+          @media (max-width: 980px) {
+            .demo-grid { grid-template-columns: 1fr; }
           }
         </style>
       </head>
       <body>
         <main class="shell">
+          <div class="topbar">
+            <div class="brand">
+              <span class="brand-mark">DP</span>
+              Data Pipeline Debug Command Center
+            </div>
+            <div class="status">Running</div>
+          </div>
+
           <section class="hero">
-            <div class="hero-top">
-              <div class="eyebrow">OpenEnv | Data Pipeline Debugging</div>
-              <h1>Debug ETL pipelines like a real data team.</h1>
-              <p class="lead">
-                This environment evaluates whether an agent can diagnose and repair broken
-                data pipelines with deterministic grading across schema mismatches, null
-                handling, type conversion bugs, aggregation drift, and dependency-chain failures.
-              </p>
-              <div class="actions">
-                <a class="button primary" href="/docs">Open API Docs</a>
-                <a class="button" href="/openapi.json">OpenAPI Schema</a>
-              </div>
-              <div class="metrics">
-                <div class="metric"><strong>3</strong><span>Difficulty Levels</span></div>
-                <div class="metric"><strong>1.00</strong><span>Max Step Reward</span></div>
-                <div class="metric"><strong>Deterministic</strong><span>Grading</span></div>
-              </div>
+            <div class="eyebrow">OpenEnv Environment</div>
+            <h1>Debug ETL pipelines like a production data team.</h1>
+            <p class="lead">
+              Interactive web console for easy, medium, and hard debugging tasks with deterministic grading.
+              This mirrors real pipeline repair loops: inspect broken code, submit fix, review score and feedback.
+            </p>
+            <div class="actions">
+              <a class="btn" href="/docs">Open API Docs</a>
+              <a class="btn secondary" href="/openapi.json">OpenAPI Schema</a>
             </div>
 
-            <div class="grid">
-              <article class="card">
-                <div class="label">Easy</div>
-                <h3>CSV Null / Type Repair</h3>
-                <p>Fix missing values, blank strings, and incorrect type coercion in a tabular cleanup stage.</p>
-              </article>
+            <div class="hero-grid">
+              <div class="stat"><strong>3</strong><span>Difficulty Levels</span></div>
+              <div class="stat"><strong>Dense</strong><span>Reward Signal</span></div>
+              <div class="stat"><strong>Deterministic</strong><span>Grading</span></div>
+              <div class="stat"><strong>(0,1)</strong><span>Score Interval</span></div>
+            </div>
 
-              <article class="card">
-                <div class="label">Medium</div>
-                <h3>Schema Drift Recovery</h3>
-                <p>Repair a multi-step customer payments pipeline where upstream field names and status values drift.</p>
-              </article>
-
-              <article class="card">
-                <div class="label">Hard</div>
-                <h3>Dependency Chain Debugging</h3>
-                <p>Resolve a staged ETL break where fixing one transform can silently break downstream enrichment.</p>
-              </article>
-
-              <article class="card wide">
-                <div class="label">What The Agent Sees</div>
-                <div class="pill-row">
-                  <span class="pill">broken pipeline code</span>
-                  <span class="pill">expected schema contract</span>
-                  <span class="pill">deterministic sample data</span>
-                  <span class="pill">pass/fail grading feedback</span>
+            <div class="demo-grid">
+              <article class="panel">
+                <h3 style="margin-top:0;">Live Debug Console</h3>
+                <div class="controls">
+                  <label>
+                    Difficulty
+                    <select id="difficulty">
+                      <option value="easy">easy</option>
+                      <option value="medium">medium</option>
+                      <option value="hard">hard</option>
+                    </select>
+                  </label>
+                  <label>
+                    Task ID
+                    <select id="taskId">
+                      <option value="easy_csv_null_type">easy_csv_null_type</option>
+                      <option value="medium_schema_drift">medium_schema_drift</option>
+                      <option value="hard_dependency_chain">hard_dependency_chain</option>
+                    </select>
+                  </label>
                 </div>
-              </article>
-
-              <article class="card wide">
-                <div class="label">Evaluation Signal</div>
-                <p>
-                  Rewards are dense and deterministic. Each step combines schema correctness, type fidelity,
-                  and output-value accuracy, with explicit penalties for unsafe or broken code paths.
-                </p>
-                <div class="pill-row">
-                  <span class="pill">schema score (35%)</span>
-                  <span class="pill">type score (25%)</span>
-                  <span class="pill">value score (40%)</span>
-                  <span class="pill">bounded reward [0.0-1.0]</span>
+                <div class="button-row">
+                  <button onclick="resetDemo()">Reset Episode</button>
+                  <button class="secondary" onclick="submitStep()">Submit Candidate</button>
                 </div>
+                <p class="small">Tip: Reset loads the broken pipeline into the editor. Modify it and submit.</p>
+                <label style="margin-top:10px;">
+                  Candidate Pipeline
+                  <textarea id="candidatePipeline"></textarea>
+                </label>
+                <div id="resultBox" class="result">Press Reset Episode to start.</div>
               </article>
 
-              <article class="card full">
-                <div class="label">Built For Teams</div>
-                <pre>- Reproduces real ETL debugging workflows used in data teams
-- Supports curriculum-style evaluation from easy to hard dependency chains
-- Gives transparent grader signals for model iteration and benchmarking</pre>
+              <article class="panel">
+                <h3 style="margin-top:0;">Episode Snapshot</h3>
+                <div class="kpis">
+                  <div class="kpi"><span>Task</span><strong id="kTask">-</strong></div>
+                  <div class="kpi"><span>Reward</span><strong id="kReward">-</strong></div>
+                  <div class="kpi"><span>Score</span><strong id="kScore">-</strong></div>
+                  <div class="kpi"><span>Attempts Left</span><strong id="kAttempts">-</strong></div>
+                </div>
+                <div style="margin-top:12px;">
+                  <span class="badge" id="kPass">Awaiting run</span>
+                </div>
+                <h4 style="margin:14px 0 8px;">Prompt</h4>
+                <pre id="promptBox">{}</pre>
+                <h4 style="margin:14px 0 8px;">Feedback</h4>
+                <pre id="feedbackBox">{}</pre>
+              </article>
+            </div>
+
+            <div class="demo-grid">
+              <article class="panel">
+                <h3 style="margin-top:0;">Observation JSON</h3>
+                <pre id="obsBox">{}</pre>
+              </article>
+              <article class="panel">
+                <h3 style="margin-top:0;">State JSON</h3>
+                <pre id="stateBox">{}</pre>
               </article>
             </div>
           </section>
+
+          <section class="section">
+            <h2>Tasks</h2>
+            <div class="task-grid">
+              <article class="card">
+                <h3>CSV Null / Type Repair</h3>
+                <p>Repair missing values, type coercion bugs, and schema correctness in cleaned tabular output.</p>
+                <span class="badge">Easy</span>
+              </article>
+              <article class="card">
+                <h3>Schema Drift Recovery</h3>
+                <p>Fix multi-step customer payment pipeline under mixed naming conventions and status drift.</p>
+                <span class="badge">Medium</span>
+              </article>
+              <article class="card">
+                <h3>Dependency Chain Debugging</h3>
+                <p>Restore stage compatibility so upstream changes do not silently break downstream enrichment.</p>
+                <span class="badge">Hard</span>
+              </article>
+            </div>
+          </section>
+
+          <section class="section">
+            <h2>Endpoints</h2>
+            <div class="endpoint-grid">
+              <article class="endpoint">
+                <h3><a href="/health">/health</a></h3>
+                <p>Runtime liveness check.</p>
+              </article>
+              <article class="endpoint">
+                <h3><a href="/metadata">/metadata</a></h3>
+                <p>Environment metadata summary.</p>
+              </article>
+              <article class="endpoint">
+                <h3><a href="/schema">/schema</a></h3>
+                <p>Action, observation, and state schemas.</p>
+              </article>
+              <article class="endpoint">
+                <h3><a href="/docs">/docs</a></h3>
+                <p>Interactive OpenAPI docs.</p>
+              </article>
+            </div>
+            <p class="footnote">The demo UI is convenience-only. Official evaluation should use standard OpenEnv endpoints.</p>
+          </section>
         </main>
+
+        <script>
+          let currentObservation = null;
+
+          function setTaskFromDifficulty() {
+            const difficulty = document.getElementById("difficulty").value;
+            const map = {
+              easy: "easy_csv_null_type",
+              medium: "medium_schema_drift",
+              hard: "hard_dependency_chain",
+            };
+            document.getElementById("taskId").value = map[difficulty];
+          }
+
+          function setDifficultyFromTask() {
+            const task = document.getElementById("taskId").value;
+            const map = {
+              easy_csv_null_type: "easy",
+              medium_schema_drift: "medium",
+              hard_dependency_chain: "hard",
+            };
+            document.getElementById("difficulty").value = map[task] || "easy";
+          }
+
+          async function postJson(url, payload) {
+            const response = await fetch(url, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+            return await response.json();
+          }
+
+          function setMessage(text, isError = false) {
+            const box = document.getElementById("resultBox");
+            box.className = isError ? "error" : "result";
+            box.textContent = text;
+          }
+
+          function render(payload) {
+            if (payload.error) {
+              setMessage(payload.error, true);
+              return;
+            }
+            const obs = payload.observation || {};
+            const state = payload.state || {};
+            currentObservation = obs;
+
+            document.getElementById("kTask").textContent = obs.task_id || "-";
+            document.getElementById("kReward").textContent =
+              typeof obs.reward === "number" ? obs.reward.toFixed(2) : "-";
+            document.getElementById("kScore").textContent =
+              typeof obs.score === "number" ? obs.score.toFixed(2) : "-";
+            document.getElementById("kAttempts").textContent = String(obs.attempts_remaining ?? "-");
+            document.getElementById("kPass").textContent = obs.passed ? "Passed" : (obs.done ? "Done" : "In progress");
+
+            document.getElementById("promptBox").textContent = obs.prompt || "{}";
+            document.getElementById("feedbackBox").textContent = obs.feedback || "{}";
+            document.getElementById("obsBox").textContent = JSON.stringify(obs, null, 2);
+            document.getElementById("stateBox").textContent = JSON.stringify(state, null, 2);
+
+            if (obs.broken_pipeline) {
+              document.getElementById("candidatePipeline").value = obs.last_submission || obs.broken_pipeline;
+            }
+
+            const parts = [
+              `done=${Boolean(obs.done)}`,
+              `passed=${Boolean(obs.passed)}`,
+              typeof obs.reward === "number" ? `reward=${obs.reward.toFixed(2)}` : "reward=-",
+              typeof obs.score === "number" ? `score=${obs.score.toFixed(2)}` : "score=-",
+            ];
+            setMessage(parts.join(" | "), false);
+          }
+
+          async function resetDemo() {
+            setTaskFromDifficulty();
+            const difficulty = document.getElementById("difficulty").value;
+            const taskId = document.getElementById("taskId").value;
+            const data = await postJson("/demo/reset", {
+              difficulty: difficulty,
+              task_id: taskId,
+              episode_id: "web-demo",
+            });
+            render(data);
+          }
+
+          async function submitStep() {
+            if (!currentObservation) {
+              setMessage("Reset episode first.", true);
+              return;
+            }
+            const candidate = document.getElementById("candidatePipeline").value;
+            const data = await postJson("/demo/step", {
+              candidate_pipeline: candidate,
+            });
+            render(data);
+          }
+
+          document.getElementById("difficulty").addEventListener("change", setTaskFromDifficulty);
+          document.getElementById("taskId").addEventListener("change", setDifficultyFromTask);
+          setTaskFromDifficulty();
+          resetDemo();
+        </script>
       </body>
     </html>
     """
@@ -417,3 +687,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
