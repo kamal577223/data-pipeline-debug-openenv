@@ -82,6 +82,11 @@ Manifest file: `envs/data_pipeline_debug_env/openenv.yaml`
 3. `hard_dependency_chain`
 - Fix staged orders ETL where upstream transformation compatibility affects downstream enrichment.
 
+Each task now uses split evaluation:
+
+- public train case: used for learning/debug feedback
+- hidden eval case(s): used in final grading to prevent hardcoded overfit solutions
+
 ## Reward Design
 
 Dense deterministic reward each step:

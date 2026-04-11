@@ -59,6 +59,7 @@ class PipelineTask:
     input_data: Any
     entrypoint: str
     expected_output: Any
+    eval_cases: list[tuple[Any, Any]]
     expected_contract: dict[str, Any]
 
 
@@ -196,6 +197,19 @@ def _build_tasks() -> dict[str, PipelineTask]:
                 {"id": 1, "name": "Alice", "age": 31, "salary": 120000.5},
                 {"id": 2, "name": "Bob", "age": 0, "salary": 0.0},
             ],
+            eval_cases=[
+                (
+                    [
+                        {"id": "10", "name": " eve ", "age": "", "salary": "100.25"},
+                        {"id": "11", "name": None, "age": "27", "salary": "70000"},
+                        {"id": "12", "name": "max", "age": "40", "salary": ""},
+                    ],
+                    [
+                        {"id": 10, "name": "Eve", "age": 0, "salary": 100.25},
+                        {"id": 12, "name": "Max", "age": 40, "salary": 0.0},
+                    ],
+                )
+            ],
             expected_contract={
                 "schema": {
                     "id": "int",
@@ -232,6 +246,26 @@ def _build_tasks() -> dict[str, PipelineTask]:
             expected_output=[
                 {"customer_id": "c1", "name": "Acme Corp", "total_paid": 25.0, "payment_count": 2},
                 {"customer_id": "c2", "name": "Beta Llc", "total_paid": 3.0, "payment_count": 1},
+            ],
+            eval_cases=[
+                (
+                    {
+                        "customers": [
+                            {"customerId": "x1", "name": "zen labs"},
+                            {"customerId": "x2", "name": "nova ai"},
+                        ],
+                        "payments": [
+                            {"customer_id": "x1", "amount": "10", "status": "paid"},
+                            {"customer_id": "x1", "amount": "2.25", "status": "PAID"},
+                            {"customer_id": "x2", "amount": "4.75", "status": "Paid"},
+                            {"customer_id": "x2", "amount": "1", "status": "failed"},
+                        ],
+                    },
+                    [
+                        {"customer_id": "x1", "name": "Zen Labs", "total_paid": 12.25, "payment_count": 2},
+                        {"customer_id": "x2", "name": "Nova Ai", "total_paid": 4.75, "payment_count": 1},
+                    ],
+                )
             ],
             expected_contract={
                 "schema": {
@@ -285,6 +319,32 @@ def _build_tasks() -> dict[str, PipelineTask]:
                 {"order_id": "o1", "customer": "Northwind", "revenue": 99.0, "tier": "standard"},
                 {"order_id": "o2", "customer": "Contoso", "revenue": 60.0, "tier": "standard"},
                 {"order_id": "o3", "customer": "Fabrikam", "revenue": 112.0, "tier": "gold"},
+            ],
+            eval_cases=[
+                (
+                    [
+                        {
+                            "order_id": "p1",
+                            "customer": "Alpha",
+                            "discount_pct": "0",
+                            "items": [
+                                {"sku": "K", "qty": 1, "unit_price": "150.00"},
+                            ],
+                        },
+                        {
+                            "order_id": "p2",
+                            "customer": "Beta",
+                            "discount_pct": "25",
+                            "items": [
+                                {"sku": "L", "qty": 2, "unit_price": "40.00"},
+                            ],
+                        },
+                    ],
+                    [
+                        {"order_id": "p1", "customer": "Alpha", "revenue": 150.0, "tier": "gold"},
+                        {"order_id": "p2", "customer": "Beta", "revenue": 60.0, "tier": "standard"},
+                    ],
+                )
             ],
             expected_contract={
                 "schema": {
@@ -497,34 +557,45 @@ class DataPipelineDebugEnvironment(
                 "reward_breakdown": score_components,
             }
 
-        try:
-            actual_output = namespace[task.entrypoint](deepcopy(task.input_data))
-        except Exception as exc:
-            formatted = "".join(traceback.format_exception_only(type(exc), exc)).strip()
-            score_components["runtime_penalty"] = 0.30
-            score = self._apply_difficulty_calibration(
-                self._combine_score(score_components),
-                task.difficulty,
-            )
-            return {
-                "passed": False,
-                "feedback": f"Pipeline raised an exception during execution: {formatted}",
-                "score": score,
-                "reward": score,
-                "reward_breakdown": score_components,
-            }
+        cases: list[tuple[str, Any, Any]] = [("train", task.input_data, task.expected_output)]
+        for idx, (case_input, case_expected) in enumerate(task.eval_cases, start=1):
+            cases.append((f"eval_{idx}", case_input, case_expected))
 
-        validation = self._validate_output(actual_output, task.expected_output, task.expected_contract)
-        issues = validation["issues"]
-        score_components["schema_score"] = validation["schema_score"]
-        score_components["type_score"] = validation["type_score"]
-        score_components["value_score"] = validation["value_score"]
+        validations: list[dict[str, Any]] = []
+        for case_label, case_input, case_expected in cases:
+            try:
+                actual_output = namespace[task.entrypoint](deepcopy(case_input))
+            except Exception as exc:
+                formatted = "".join(traceback.format_exception_only(type(exc), exc)).strip()
+                score_components["runtime_penalty"] = 0.30
+                score = self._apply_difficulty_calibration(
+                    self._combine_score(score_components),
+                    task.difficulty,
+                )
+                return {
+                    "passed": False,
+                    "feedback": f"{case_label} execution failed: {formatted}",
+                    "score": score,
+                    "reward": score,
+                    "reward_breakdown": score_components,
+                }
+
+            validation = self._validate_output(actual_output, case_expected, task.expected_contract)
+            prefixed_issues = [f"{case_label}: {issue}" for issue in validation["issues"]]
+            validation["issues"] = prefixed_issues
+            validations.append(validation)
+
+        issues = [issue for validation in validations for issue in validation["issues"]]
+        count = max(1, len(validations))
+        score_components["schema_score"] = sum(v["schema_score"] for v in validations) / count
+        score_components["type_score"] = sum(v["type_score"] for v in validations) / count
+        score_components["value_score"] = sum(v["value_score"] for v in validations) / count
 
         score = self._apply_difficulty_calibration(
             self._combine_score(score_components),
             task.difficulty,
         )
-        passed = bool(validation["passed"])
+        passed = all(bool(v["passed"]) for v in validations)
 
         if issues:
             return {

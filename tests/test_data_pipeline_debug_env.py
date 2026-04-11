@@ -80,6 +80,23 @@ def run_pipeline(payload):
         self.assertEqual(result.attempts_remaining, 2)
         self.assertIn("Output values do not match expected results.", result.feedback)
 
+    def test_overfit_easy_submission_fails_hidden_eval_case(self):
+        self.env.reset(difficulty="easy")
+        result = self.env.step(
+            DataPipelineDebugAction(
+                candidate_pipeline="""
+def run_pipeline(rows):
+    # Intentionally overfit to the public train sample IDs.
+    return [
+        {"id": 1, "name": "Alice", "age": 31, "salary": 120000.5},
+        {"id": 2, "name": "Bob", "age": 0, "salary": 0.0},
+    ]
+""".strip()
+            )
+        )
+        self.assertFalse(result.passed)
+        self.assertIn("eval_1", result.feedback)
+
     def test_hard_task_passes_with_dependency_safe_fix(self):
         self.env.reset(difficulty="hard")
         result = self.env.step(
