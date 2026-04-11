@@ -91,7 +91,13 @@ Dense deterministic reward each step:
 - value score: `40%`
 - penalties: unsafe code patterns + runtime/compile failures
 
-To satisfy strict phase validation, reward/score values are kept in open interval `(0, 1)` and not equal to `0` or `1`.
+Difficulty-aware calibration is applied after core grading to improve score separation across tasks:
+
+- easy band: `(0.01, 0.95)`
+- medium band: `(0.02, 0.97)`
+- hard band: `(0.03, 0.99)`
+
+This keeps phase validation compliance (`0 < score < 1`) while avoiding identical scores across all task levels.
 
 ## Setup
 
@@ -143,10 +149,10 @@ The script emits strict logs:
 
 From `outputs/evals/baseline_report.json`:
 
-- easy: `0.99`
-- medium: `0.99`
+- easy: `0.95`
+- medium: `0.97`
 - hard: `0.99`
-- average: `0.99`
+- average: `0.97`
 
 ## Deployment
 

@@ -3,14 +3,14 @@
   "by_task": {
     "easy": {
       "task_id": "easy_csv_null_type",
-      "score": 0.99,
-      "reward": 0.99,
+      "score": 0.95,
+      "reward": 0.95,
       "passed": true
     },
     "medium": {
       "task_id": "medium_schema_drift",
-      "score": 0.99,
-      "reward": 0.99,
+      "score": 0.97,
+      "reward": 0.97,
       "passed": true
     },
     "hard": {
@@ -20,5 +20,5 @@
       "passed": true
     }
   },
-  "average_score": 0.99
+  "average_score": 0.97
 }

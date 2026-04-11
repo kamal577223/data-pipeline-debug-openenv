@@ -471,7 +471,10 @@ class DataPipelineDebugEnvironment(
         except Exception as exc:
             formatted = "".join(traceback.format_exception_only(type(exc), exc)).strip()
             score_components["runtime_penalty"] = 0.35
-            score = self._combine_score(score_components)
+            score = self._apply_difficulty_calibration(
+                self._combine_score(score_components),
+                task.difficulty,
+            )
             return {
                 "passed": False,
                 "feedback": f"Compilation error: {formatted}",
@@ -482,7 +485,10 @@ class DataPipelineDebugEnvironment(
 
         if task.entrypoint not in namespace or not callable(namespace[task.entrypoint]):
             score_components["runtime_penalty"] = 0.25
-            score = self._combine_score(score_components)
+            score = self._apply_difficulty_calibration(
+                self._combine_score(score_components),
+                task.difficulty,
+            )
             return {
                 "passed": False,
                 "feedback": f"Your submission must define a callable `{task.entrypoint}`.",
@@ -496,7 +502,10 @@ class DataPipelineDebugEnvironment(
         except Exception as exc:
             formatted = "".join(traceback.format_exception_only(type(exc), exc)).strip()
             score_components["runtime_penalty"] = 0.30
-            score = self._combine_score(score_components)
+            score = self._apply_difficulty_calibration(
+                self._combine_score(score_components),
+                task.difficulty,
+            )
             return {
                 "passed": False,
                 "feedback": f"Pipeline raised an exception during execution: {formatted}",
@@ -511,7 +520,10 @@ class DataPipelineDebugEnvironment(
         score_components["type_score"] = validation["type_score"]
         score_components["value_score"] = validation["value_score"]
 
-        score = self._combine_score(score_components)
+        score = self._apply_difficulty_calibration(
+            self._combine_score(score_components),
+            task.difficulty,
+        )
         passed = bool(validation["passed"])
 
         if issues:
@@ -652,6 +664,19 @@ class DataPipelineDebugEnvironment(
         penalties = components["safety_penalty"] + components["runtime_penalty"]
         score = base - penalties
         return self._strict_unit_interval(score)
+
+    def _apply_difficulty_calibration(self, score: float, difficulty: str) -> float:
+        """Map raw quality into task-specific bands for better difficulty separation."""
+        bands = {
+            "easy": (0.01, 0.95),
+            "medium": (0.02, 0.97),
+            "hard": (0.03, 0.99),
+        }
+        lower, upper = bands.get(difficulty, (0.01, 0.99))
+        # First normalize into [0,1], then project into a difficulty-specific open interval.
+        normalized = (self._strict_unit_interval(score) - 0.01) / 0.98
+        calibrated = lower + (upper - lower) * normalized
+        return self._strict_unit_interval(calibrated)
 
     def _strict_unit_interval(self, value: float) -> float:
         """Clamp scores/rewards to the open interval (0, 1) for validator compatibility."""
