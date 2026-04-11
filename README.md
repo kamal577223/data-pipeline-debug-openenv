@@ -10,9 +10,7 @@ Data Pipeline Debug OpenEnv is a real-world environment for evaluating whether a
 - Hugging Face Space page: [KAMAL2525/data-pipeline-debug-openenv](https://huggingface.co/spaces/KAMAL2525/data-pipeline-debug-openenv)
 - Hugging Face runtime URL: [kamal2525-data-pipeline-debug-openenv.hf.space](https://kamal2525-data-pipeline-debug-openenv.hf.space)
 - OpenEnv reference format used: [meta-pytorch/OpenEnv/envs/reasoning_gym_env](https://github.com/meta-pytorch/OpenEnv/tree/main/envs/reasoning_gym_env)
-- Comparison reference repos:
-- [AKJenaX/Bank_Shield](https://github.com/AKJenaX/Bank_Shield)
-- [Adityabaskati-weeb/METAMINDS](https://github.com/Adityabaskati-weeb/METAMINDS)
+
 
 ## Why This Environment
 
