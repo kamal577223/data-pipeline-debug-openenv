@@ -189,9 +189,11 @@ python pre_validation.py
 
 ## Docker
 
+> Note: The Docker image tag can be any name. Using the original tag keeps commands familiar and avoids confusion for existing users.
+
 ```bash
-docker build -t pipesynx -f envs/data_pipeline_debug_env/Dockerfile envs/data_pipeline_debug_env
-docker run -p 8000:8000 pipesynx
+docker build -t data-pipeline-debug-openenv -f envs/data_pipeline_debug_env/Dockerfile envs/data_pipeline_debug_env
+docker run -p 8000:8000 data-pipeline-debug-openenv
 ```
 
 ---
