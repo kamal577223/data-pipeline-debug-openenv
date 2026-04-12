@@ -221,6 +221,7 @@ LANDING_PAGE = dedent(
 
           .hero-grid,
           .demo-grid,
+          .json-grid,
           .task-grid,
           .endpoint-grid {
             display: grid;
@@ -230,6 +231,7 @@ LANDING_PAGE = dedent(
 
           .hero-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
           .demo-grid { grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr); align-items: start; }
+          .json-grid { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
           .task-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
           .endpoint-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
 
@@ -369,6 +371,57 @@ LANDING_PAGE = dedent(
           .p4 { left: 10%; bottom: 12%; }
           .p5 { right: 10%; bottom: 18%; }
 
+          .pipeline-band {
+            margin-top: 14px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+          }
+
+          .stage-card {
+            position: relative;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 12px;
+            background: linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.01));
+            overflow: hidden;
+          }
+
+          .stage-card::after {
+            content: "";
+            position: absolute;
+            width: 180%;
+            height: 140%;
+            left: -40%;
+            top: -20%;
+            background: linear-gradient(90deg, transparent, rgba(94, 227, 255, 0.22), transparent);
+            transform: rotate(12deg) translateX(-120%);
+            animation: scan 4.8s linear infinite;
+          }
+
+          .stage-card:nth-child(2)::after { animation-delay: 0.6s; }
+          .stage-card:nth-child(3)::after { animation-delay: 1.2s; }
+          .stage-card:nth-child(4)::after { animation-delay: 1.8s; }
+          .stage-card:nth-child(5)::after { animation-delay: 2.4s; }
+
+          @keyframes scan {
+            from { transform: rotate(12deg) translateX(-120%); }
+            to { transform: rotate(12deg) translateX(120%); }
+          }
+
+          .stage-card strong {
+            display: block;
+            font-family: "Orbitron", sans-serif;
+            font-size: 13px;
+            letter-spacing: 0.08em;
+            color: var(--ok);
+          }
+
+          .stage-card span {
+            font-size: 12px;
+            color: var(--muted);
+          }
+
           .actions {
             display: flex;
             flex-wrap: wrap;
@@ -412,7 +465,7 @@ LANDING_PAGE = dedent(
           }
 
           .section {
-            margin-top: 26px;
+            margin-top: 18px;
           }
 
           .section h2 {
@@ -557,6 +610,7 @@ LANDING_PAGE = dedent(
 
           @media (max-width: 980px) {
             .demo-grid { grid-template-columns: 1fr; }
+            .json-grid { grid-template-columns: 1fr; }
           }
         </style>
       </head>
@@ -572,7 +626,7 @@ LANDING_PAGE = dedent(
           </div>
 
           <section class="hero">
-            <div class="eyebrow">OpenEnv • Data Pipeline Debugging</div>
+            <div class="eyebrow">OpenEnv - Data Pipeline Debugging</div>
             <h1>Realistic ETL Incident Simulator with 3D live motion.</h1>
             <p class="lead">
               Diagnose and repair broken production-like pipelines across easy, medium, and hard tasks.
@@ -588,6 +642,14 @@ LANDING_PAGE = dedent(
               <div class="stat"><strong>Hidden Eval</strong><span>Anti-overfit Grading</span></div>
               <div class="stat"><strong>Deterministic</strong><span>Grading</span></div>
               <div class="stat"><strong>Live Demo</strong><span>Reset + Step Console</span></div>
+            </div>
+
+            <div class="pipeline-band">
+              <div class="stage-card"><strong>INGEST</strong><span>Raw source pulls and anomaly entry point.</span></div>
+              <div class="stage-card"><strong>VALIDATE</strong><span>Null checks, type checks, schema contracts.</span></div>
+              <div class="stage-card"><strong>TRANSFORM</strong><span>Business-logic fixes and drift correction.</span></div>
+              <div class="stage-card"><strong>ENRICH</strong><span>Dependency-safe joins and derived fields.</span></div>
+              <div class="stage-card"><strong>PUBLISH</strong><span>Deterministic grader reward and feedback.</span></div>
             </div>
 
             <div class="demo-grid">
@@ -647,6 +709,9 @@ LANDING_PAGE = dedent(
                 <div id="resultBox" class="result">Press Reset Episode to start.</div>
               </article>
 
+            </div>
+
+            <div class="json-grid">
               <article class="panel">
                 <h3 style="margin-top:0;">Episode Snapshot</h3>
                 <div class="kpis">
@@ -663,9 +728,6 @@ LANDING_PAGE = dedent(
                 <h4 style="margin:14px 0 8px;">Feedback</h4>
                 <pre id="feedbackBox">{}</pre>
               </article>
-            </div>
-
-            <div class="demo-grid">
               <article class="panel">
                 <h3 style="margin-top:0;">Observation JSON</h3>
                 <pre id="obsBox">{}</pre>
@@ -681,17 +743,17 @@ LANDING_PAGE = dedent(
             <h2>Task Ladder</h2>
             <div class="task-grid">
               <article class="card">
-                <h3>Easy • CSV Null / Type Repair</h3>
+                <h3>Easy - CSV Null / Type Repair</h3>
                 <p>Repair missing values, type coercion bugs, and schema correctness in cleaned tabular output.</p>
                 <span class="badge">Easy</span>
               </article>
               <article class="card">
-                <h3>Medium • Schema Drift Recovery</h3>
+                <h3>Medium - Schema Drift Recovery</h3>
                 <p>Fix multi-step customer payment pipeline under mixed naming conventions and status drift.</p>
                 <span class="badge">Medium</span>
               </article>
               <article class="card">
-                <h3>Hard • Dependency Chain Debugging</h3>
+                <h3>Hard - Dependency Chain Debugging</h3>
                 <p>Restore stage compatibility so upstream changes do not silently break downstream enrichment.</p>
                 <span class="badge">Hard</span>
               </article>
