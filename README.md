@@ -175,6 +175,8 @@ source .venv/bin/activate
 pip install -r envs/data_pipeline_debug_env/server/requirements.txt
 ```
 
+This dependency set includes runtime requirements for environment serving, `pre_validation.py`, and `inference.py`.
+
 ---
 
 ## Local Validation
