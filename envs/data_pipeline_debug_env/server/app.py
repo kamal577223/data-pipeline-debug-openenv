@@ -83,21 +83,23 @@ LANDING_PAGE = dedent(
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Data Pipeline Debug Command Center</title>
+        <title>Data Pipeline Debug Holo Deck</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
         <style>
           :root {
-            --bg: #050805;
-            --surface: rgba(8, 18, 10, 0.78);
-            --text: #e8f5e9;
-            --muted: #9bc79f;
-            --line: rgba(0, 153, 0, 0.20);
-            --ok: #00cc66;
-            --warn: #ffb703;
-            --info: #a8dadc;
-            --danger: #e63946;
+            --bg: #070a12;
+            --bg2: #090f1a;
+            --surface: rgba(10, 18, 30, 0.74);
+            --panel-2: rgba(10, 18, 30, 0.92);
+            --text: #ecf5ff;
+            --muted: #97aeca;
+            --line: rgba(94, 227, 255, 0.22);
+            --ok: #5ee3ff;
+            --warn: #7df7b6;
+            --info: #4b80ff;
+            --danger: #ff6a85;
             --shadow: 0 10px 32px rgba(0, 0, 0, 0.55);
           }
 
@@ -108,10 +110,23 @@ LANDING_PAGE = dedent(
             font-family: "IBM Plex Sans", system-ui, sans-serif;
             color: var(--text);
             background:
-              radial-gradient(circle at 15% 10%, rgba(0, 204, 102, 0.10), transparent 28%),
-              radial-gradient(circle at 85% 75%, rgba(168, 218, 220, 0.08), transparent 30%),
-              linear-gradient(180deg, #050805 0%, #09130a 100%);
+              radial-gradient(1200px 700px at 10% -5%, rgba(94, 227, 255, 0.18), transparent 50%),
+              radial-gradient(900px 600px at 90% -10%, rgba(75, 128, 255, 0.24), transparent 48%),
+              linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);
             min-height: 100vh;
+            overflow-x: hidden;
+          }
+
+          .back-grid {
+            position: fixed;
+            inset: 0;
+            background-image:
+              linear-gradient(rgba(94, 227, 255, 0.06) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(94, 227, 255, 0.06) 1px, transparent 1px);
+            background-size: 42px 42px;
+            mask-image: radial-gradient(circle at center, black 0%, transparent 85%);
+            pointer-events: none;
+            z-index: 0;
           }
 
           .shell {
@@ -130,7 +145,7 @@ LANDING_PAGE = dedent(
             gap: 10px;
             margin: -14px -14px 14px;
             padding: 11px 24px;
-            background: rgba(5, 8, 5, 0.90);
+            background: rgba(7, 10, 18, 0.84);
             border-bottom: 1px solid var(--line);
             backdrop-filter: blur(16px);
           }
@@ -139,8 +154,9 @@ LANDING_PAGE = dedent(
             display: flex;
             gap: 10px;
             align-items: center;
-            font-weight: 800;
-            letter-spacing: -0.02em;
+            font-family: "Orbitron", sans-serif;
+            font-weight: 700;
+            letter-spacing: 0.02em;
           }
 
           .brand-mark {
@@ -149,23 +165,24 @@ LANDING_PAGE = dedent(
             border-radius: 8px;
             display: grid;
             place-items: center;
-            background: linear-gradient(135deg, var(--ok), #0d5227);
-            color: #fff;
+            background: linear-gradient(140deg, var(--ok), var(--info));
+            color: #011018;
             font-weight: 900;
+            box-shadow: 0 0 24px rgba(94, 227, 255, 0.5);
           }
 
           .status {
             padding: 7px 12px;
             border-radius: 999px;
             border: 1px solid var(--line);
-            color: var(--ok);
-            background: rgba(255, 255, 255, 0.03);
+            color: var(--warn);
+            background: rgba(125, 247, 182, 0.12);
             font-size: 13px;
             font-weight: 700;
           }
 
           .hero {
-            background: linear-gradient(135deg, rgba(8, 18, 10, 0.94), rgba(8, 18, 10, 0.72));
+            background: linear-gradient(140deg, var(--panel-2), var(--surface));
             border: 1px solid var(--line);
             border-radius: 12px;
             box-shadow: var(--shadow);
@@ -176,21 +193,22 @@ LANDING_PAGE = dedent(
             display: inline-block;
             padding: 7px 12px;
             border-radius: 999px;
-            background: rgba(0, 153, 0, 0.16);
+            background: rgba(94, 227, 255, 0.12);
             color: var(--ok);
             font-size: 12px;
             font-weight: 700;
             letter-spacing: 0.08em;
             text-transform: uppercase;
             margin-bottom: 14px;
+            font-family: "Orbitron", sans-serif;
           }
 
           h1 {
             margin: 0 0 10px;
-            font-family: "Space Grotesk", sans-serif;
+            font-family: "Orbitron", sans-serif;
             font-size: clamp(32px, 4.5vw, 54px);
             line-height: 0.95;
-            letter-spacing: -0.03em;
+            letter-spacing: -0.02em;
           }
 
           .lead {
@@ -214,6 +232,142 @@ LANDING_PAGE = dedent(
           .demo-grid { grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr); align-items: start; }
           .task-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
           .endpoint-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+
+          .scene {
+            position: relative;
+            min-height: 340px;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            overflow: hidden;
+            background:
+              radial-gradient(ellipse at center, rgba(94, 227, 255, 0.12), transparent 55%),
+              linear-gradient(180deg, rgba(9, 18, 36, 0.95), rgba(8, 13, 26, 0.95));
+            perspective: 1000px;
+          }
+
+          .track {
+            position: absolute;
+            left: 10%;
+            right: 10%;
+            bottom: 18%;
+            height: 120px;
+            transform: rotateX(65deg);
+          }
+
+          .track::before, .track::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border: 1px solid rgba(94, 227, 255, 0.34);
+            border-radius: 50%;
+          }
+
+          .track::after {
+            inset: 16px;
+            border-color: rgba(75, 128, 255, 0.36);
+          }
+
+          .runner {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            margin: -10px 0 0 -10px;
+            background: var(--warn);
+            box-shadow: 0 0 20px rgba(125, 247, 182, 0.8);
+            transform: rotateZ(0deg) translateX(180px);
+            animation: orbit 5s linear infinite;
+          }
+
+          .runner.r2 {
+            animation-duration: 7s;
+            background: var(--ok);
+            box-shadow: 0 0 20px rgba(94, 227, 255, 0.8);
+            transform: rotateZ(140deg) translateX(145px);
+          }
+
+          .runner.r3 {
+            animation-duration: 4s;
+            background: #9f99ff;
+            box-shadow: 0 0 20px rgba(159, 153, 255, 0.8);
+            transform: rotateZ(250deg) translateX(110px);
+          }
+
+          @keyframes orbit {
+            from { transform: rotateZ(0deg) translateX(180px); }
+            to { transform: rotateZ(360deg) translateX(180px); }
+          }
+
+          .cube {
+            position: absolute;
+            width: 74px;
+            height: 74px;
+            transform-style: preserve-3d;
+            animation: spin 10s linear infinite;
+          }
+
+          .cube.c1 { top: 22%; left: 14%; }
+          .cube.c2 { top: 14%; right: 14%; animation-direction: reverse; animation-duration: 12s; }
+
+          .face {
+            position: absolute;
+            width: 74px;
+            height: 74px;
+            border: 1px solid rgba(94, 227, 255, 0.45);
+            background: rgba(94, 227, 255, 0.08);
+          }
+
+          .f1 { transform: rotateY(0deg) translateZ(37px); }
+          .f2 { transform: rotateY(90deg) translateZ(37px); }
+          .f3 { transform: rotateY(180deg) translateZ(37px); }
+          .f4 { transform: rotateY(-90deg) translateZ(37px); }
+          .f5 { transform: rotateX(90deg) translateZ(37px); }
+          .f6 { transform: rotateX(-90deg) translateZ(37px); }
+
+          @keyframes spin {
+            from { transform: rotateX(0deg) rotateY(0deg); }
+            to { transform: rotateX(360deg) rotateY(360deg); }
+          }
+
+          .holo-ring {
+            position: absolute;
+            width: 280px;
+            height: 280px;
+            border: 2px solid rgba(94, 227, 255, 0.25);
+            border-radius: 50%;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            animation: ringPulse 6s ease-in-out infinite;
+          }
+
+          .holo-ring.r2 { width: 340px; height: 340px; animation-delay: 1.5s; border-color: rgba(125, 247, 182, 0.2); }
+          .holo-ring.r3 { width: 400px; height: 400px; animation-delay: 3s; border-color: rgba(75, 128, 255, 0.18); }
+
+          @keyframes ringPulse {
+            0%, 100% { opacity: 0.2; transform: translate(-50%, -50%) scale(0.94); }
+            50% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
+          }
+
+          .pipeline-label {
+            position: absolute;
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: rgba(10, 18, 30, 0.92);
+            font-size: 11px;
+            color: var(--ok);
+            font-family: "Orbitron", sans-serif;
+            letter-spacing: 0.08em;
+          }
+
+          .p1 { left: 6%; top: 12%; }
+          .p2 { left: 40%; top: 7%; }
+          .p3 { right: 8%; top: 14%; }
+          .p4 { left: 10%; bottom: 12%; }
+          .p5 { right: 10%; bottom: 18%; }
 
           .actions {
             display: flex;
@@ -407,21 +561,22 @@ LANDING_PAGE = dedent(
         </style>
       </head>
       <body>
+        <div class="back-grid"></div>
         <main class="shell">
           <div class="topbar">
             <div class="brand">
               <span class="brand-mark">DP</span>
-              Data Pipeline Debug Command Center
+              Data Pipeline Holo Deck
             </div>
-            <div class="status">Running</div>
+            <div class="status">Live Runtime</div>
           </div>
 
           <section class="hero">
-            <div class="eyebrow">OpenEnv Environment</div>
-            <h1>Debug ETL pipelines like a production data team.</h1>
+            <div class="eyebrow">OpenEnv • Data Pipeline Debugging</div>
+            <h1>Realistic ETL Incident Simulator with 3D live motion.</h1>
             <p class="lead">
-              Interactive web console for easy, medium, and hard debugging tasks with deterministic grading.
-              This mirrors real pipeline repair loops: inspect broken code, submit fix, review score and feedback.
+              Diagnose and repair broken production-like pipelines across easy, medium, and hard tasks.
+              This interface complements your existing content with a holographic 3D dataflow scene and live grading console.
             </p>
             <div class="actions">
               <a class="btn" href="/docs">Open API Docs</a>
@@ -430,12 +585,36 @@ LANDING_PAGE = dedent(
 
             <div class="hero-grid">
               <div class="stat"><strong>3</strong><span>Difficulty Levels</span></div>
-              <div class="stat"><strong>Dense</strong><span>Reward Signal</span></div>
+              <div class="stat"><strong>Hidden Eval</strong><span>Anti-overfit Grading</span></div>
               <div class="stat"><strong>Deterministic</strong><span>Grading</span></div>
-              <div class="stat"><strong>(0,1)</strong><span>Score Interval</span></div>
+              <div class="stat"><strong>Live Demo</strong><span>Reset + Step Console</span></div>
             </div>
 
             <div class="demo-grid">
+              <article class="scene">
+                <div class="holo-ring"></div>
+                <div class="holo-ring r2"></div>
+                <div class="holo-ring r3"></div>
+                <div class="track">
+                  <div class="runner"></div>
+                  <div class="runner r2"></div>
+                  <div class="runner r3"></div>
+                </div>
+                <div class="cube c1">
+                  <div class="face f1"></div><div class="face f2"></div><div class="face f3"></div>
+                  <div class="face f4"></div><div class="face f5"></div><div class="face f6"></div>
+                </div>
+                <div class="cube c2">
+                  <div class="face f1"></div><div class="face f2"></div><div class="face f3"></div>
+                  <div class="face f4"></div><div class="face f5"></div><div class="face f6"></div>
+                </div>
+                <div class="pipeline-label p1">INGEST</div>
+                <div class="pipeline-label p2">VALIDATE</div>
+                <div class="pipeline-label p3">TRANSFORM</div>
+                <div class="pipeline-label p4">ENRICH</div>
+                <div class="pipeline-label p5">PUBLISH</div>
+              </article>
+
               <article class="panel">
                 <h3 style="margin-top:0;">Live Debug Console</h3>
                 <div class="controls">
@@ -499,20 +678,20 @@ LANDING_PAGE = dedent(
           </section>
 
           <section class="section">
-            <h2>Tasks</h2>
+            <h2>Task Ladder</h2>
             <div class="task-grid">
               <article class="card">
-                <h3>CSV Null / Type Repair</h3>
+                <h3>Easy • CSV Null / Type Repair</h3>
                 <p>Repair missing values, type coercion bugs, and schema correctness in cleaned tabular output.</p>
                 <span class="badge">Easy</span>
               </article>
               <article class="card">
-                <h3>Schema Drift Recovery</h3>
+                <h3>Medium • Schema Drift Recovery</h3>
                 <p>Fix multi-step customer payment pipeline under mixed naming conventions and status drift.</p>
                 <span class="badge">Medium</span>
               </article>
               <article class="card">
-                <h3>Dependency Chain Debugging</h3>
+                <h3>Hard • Dependency Chain Debugging</h3>
                 <p>Restore stage compatibility so upstream changes do not silently break downstream enrichment.</p>
                 <span class="badge">Hard</span>
               </article>
@@ -539,7 +718,7 @@ LANDING_PAGE = dedent(
                 <p>Interactive OpenAPI docs.</p>
               </article>
             </div>
-            <p class="footnote">The demo UI is convenience-only. Official evaluation should use standard OpenEnv endpoints.</p>
+            <p class="footnote">This visual layer is for human demos. Official evaluation still uses standard OpenEnv endpoints.</p>
           </section>
         </main>
 
@@ -687,4 +866,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
